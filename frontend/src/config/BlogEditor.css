@@ -1,0 +1,155 @@
+/* src/components/editor/BlogEditor.css */
+
+.blog-editor-container {
+  position: relative;
+}
+
+.blog-editor-wrapper {
+  border: 1px solid #fcd34d !important;
+  transition: all 0.2s ease;
+}
+
+.blog-editor-wrapper:focus-within {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
+}
+
+/* ProseMirror styles */
+.blog-editor-container .ProseMirror {
+  outline: none !important;
+  border: none !important;
+  padding: 12px 16px;
+  min-height: 400px;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #1a1a1a;
+  background: transparent;
+}
+
+.blog-editor-container .ProseMirror:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.blog-editor-content {
+  background: white;
+  border: none !important;
+}
+
+/* Heading styles */
+.blog-editor-container .ProseMirror h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.2;
+  color: #1a1a1a;
+}
+
+.blog-editor-container .ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
+
+.blog-editor-container .ProseMirror h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.4;
+  color: #1a1a1a;
+}
+
+.blog-editor-container .ProseMirror p {
+  margin-bottom: 0.75em;
+}
+
+/* List styles */
+.blog-editor-container .ProseMirror ul,
+.blog-editor-container .ProseMirror ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.blog-editor-container .ProseMirror li {
+  margin-bottom: 0.25em;
+}
+
+/* Blockquote */
+.blog-editor-container .ProseMirror blockquote {
+  border-left: 4px solid #f59e0b !important;
+  padding-left: 1em;
+  margin-left: 0;
+  font-style: italic;
+  color: #4b5563;
+}
+
+/* Code */
+.blog-editor-container .ProseMirror code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.blog-editor-container .ProseMirror pre {
+  background-color: #f9fafb;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+}
+
+.blog-editor-container .ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Horizontal Rule */
+.blog-editor-container .ProseMirror hr {
+  border: none !important;
+  border-top: 2px solid #fcd34d !important;
+  margin: 1.5em 0;
+}
+
+/* Links */
+.blog-editor-container .ProseMirror a {
+  color: #b45309;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.blog-editor-container .ProseMirror a:hover {
+  color: #78350f;
+}
+
+/* Placeholder */
+.ProseMirror .is-editor-empty:first-child::before {
+  color: #9ca3af;
+  font-style: italic;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Remove all borders from editor elements */
+.blog-editor-container .ProseMirror * {
+  border: none !important;
+}
+
+/* Keep specific borders */
+.blog-editor-container .ProseMirror blockquote {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.blog-editor-container .ProseMirror hr {
+  border-top: 2px solid #fcd34d !important;
+}

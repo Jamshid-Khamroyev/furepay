@@ -1,0 +1,6 @@
+{
+  "name": "Blog and Notes Platform",
+  "description": "A clean, responsive React, Vite, and Tailwind CSS client for managing blogs, notes, profile details, and administrative users.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  username  String
+  avatar    String?
+  bio       String?
+  role      Role     @default(USER)
+  plan      Plan     @default(FREE)
+  isBlocked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Munosabatlar (Relations)
+  blogs    Blog[]
+  notes    Note[]
+  comments Comment[]
+  likes    Like[]
+
+  @@map("users")
+}
+
+model Blog {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Egasi (User)
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Munosabatlar
+  comments Comment[]
+  likes    Like[]
+  tags     Tag[]     @relation("BlogTags")
+
+  // Filtrlar va qidiruvni optimallashtirish uchun indekslar
+  @@index([createdAt, title])
+  @@map("blogs")
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  content     String?  @db.Text
+  image       String?
+  imageFileId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Egasi (User)
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  likes Like[]
+
+  @@index([createdAt])
+  @@map("notes")
+}
+
+model Tag {
+  id    String @id @default(uuid())
+  name  String @unique
+  blogs Blog[] @relation("BlogTags")
+
+  @@map("tags")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Kim yozgan?
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Qayerga yozilgan? (Yo Blog'ga, yo Note'ga - ixtiyoriy/optional munosabat)
+  blogId String?
+  blog   Blog?   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Kim like bosdi?
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Qaysi obyektga like bosildi? (Blog yoki Note)
+  blogId String?
+  blog   Blog?   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  noteId String?
+  note   Note?   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  // Bir foydalanuvchi bitta blog/note'ga faqat 1 marta like bosa olishi uchun unique constraint
+  @@unique([userId, blogId])
+  @@unique([userId, noteId])
+  @@map("likes")
+}

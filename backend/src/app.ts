@@ -15,15 +15,7 @@ app.use(
   express.raw({ type: "application/json" })
 );
 
-app.use(cors({
-  origin: [
-    "https://furepay.onrender.com",
-    "http://169.58.221.22",
-    "http://169.58.221.22:80",
-    process.env.CLIENT_URL || "",
-  ].filter(Boolean),
-  credentials: true
-}));
+app.use(cors({  origin: ["https://furepay.onrender.com"], credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
 

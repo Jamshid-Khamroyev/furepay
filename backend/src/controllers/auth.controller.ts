@@ -8,8 +8,8 @@ class AuthController {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+        secure: false,
+        sameSite: "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
       });
 
@@ -25,8 +25,8 @@ class AuthController {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+        secure: false,
+        sameSite: "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
       });
 
@@ -49,8 +49,8 @@ class AuthController {
       const { token, user } = await authService.googleLogin(credential);
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+        secure: false,
+        sameSite: "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
       });
 

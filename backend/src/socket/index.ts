@@ -7,9 +7,8 @@ export let users: string[] = []
 export const initSocket = (server: HttpServer) => {
   io = new Server(server, {
     cors: {
-    //   origin: process.env.CLIENT_URL,
-        origin: "http://localhost:3000",
-        credentials: true,
+      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      credentials: true,
     },
   });
 

@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Blog } from '../types';
 import { useStore } from '../store/useStore';
 import { api } from '../api';
-import { Heart, Calendar, Tag, ArrowRight, User, MessageCircle, Loader2, LoaderIcon, Edit2 } from 'lucide-react';
+import { Heart, ArrowUpRight, MessageCircle, LoaderIcon, Pencil, Trash2 } from 'lucide-react';
+import { Avatar } from './Navbar';
 import { toast } from 'sonner';
 
 const getAuthorName = (blog: Blog): string => {
@@ -31,6 +32,43 @@ const formatDate = (dateStr?: string): string => {
   });
 };
 
+const getDateParts = (dateStr?: string): { monthDay: string; year: string } => {
+  if (!dateStr) return { monthDay: '—', year: '' };
+  const d = new Date(dateStr);
+  return {
+    monthDay: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(),
+    year: String(d.getFullYear()),
+  };
+};
+
+const formatShortDate = (dateStr?: string): string => {
+  if (!dateStr) return 'Unknown Date';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// Plain-text preview from TipTap JSON (or raw string) content
+const getExcerpt = (content?: string, max = 280): string => {
+  if (!content) return '';
+  const collect = (node: any): string => {
+    if (!node) return '';
+    if (typeof node.text === 'string') return node.text;
+    if (Array.isArray(node.content)) {
+      const sep = node.type === 'paragraph' || node.type === 'heading' ? '' : ' ';
+      return node.content.map(collect).join(sep);
+    }
+    return '';
+  };
+  let text = '';
+  try {
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+    text = typeof parsed === 'object' ? collect(parsed) : String(parsed);
+  } catch {
+    text = String(content).replace(/<[^>]*>/g, ' ');
+  }
+  text = text.replace(/\s+/g, ' ').trim();
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+};
+
 const isUserLiked = (blog: Blog, userId?: string): boolean => {
   if (!userId) return false;
   return blog.likes.some(like => like.userId === userId);
@@ -50,6 +88,9 @@ export default function BlogCard({ blog, onLikeToggle, setBlogs }: BlogCardProps
   const authorName = getAuthorName(blog);
   const authorAvatar = getAuthorAvatar(blog);
   const formattedDate = formatDate(blog.createdAt);
+  const formattedShortDate = formatShortDate(blog.createdAt);
+  const dateParts = getDateParts(blog.createdAt);
+  const excerpt = useMemo(() => getExcerpt(blog.content), [blog.content]);
   const likesCount = getLikesCount(blog);
   const commentsCount = getCommentsCount(blog);
   const isLiked = isUserLiked(blog, user?.id);
@@ -109,137 +150,113 @@ export default function BlogCard({ blog, onLikeToggle, setBlogs }: BlogCardProps
   // Yangi holat: foydalanuvchi o'z blogini tahrirlashi yoki o'chirishi mumkin
   const isOwner = user?.id === blog.author.id;
 
+  const goToAuthor = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/profile/${blog.author.id}`);
+  };
+
   return (
     <Link
       to={`/blogs/${encodeURIComponent(blog.slug)}`}
-      className="block group"
+      className="group flex gap-8 py-7 border-b border-line active:opacity-80 transition-opacity"
     >
-      <div className="bg-[#fffefb] border border-amber-200/60 rounded-xl overflow-hidden hover:border-amber-400 hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-        {/* Image area - Title as image */}
-        <div className="relative w-full h-48 bg-gradient-to-br from-amber-100 via-amber-50 to-amber-100/50 flex items-center justify-center p-6 overflow-hidden">
-          {/* Decorative pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-300 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-amber-400 rounded-full blur-3xl" />
-          </div>
-          
-          {/* Title as image */}
-          <div className="relative z-10 text-center">
-            <h3 className="text-2xl sm:text-3xl font-serif font-bold text-amber-950 leading-tight line-clamp-3 group-hover:text-amber-700 transition-colors">
-              {blog.title.slice(0, 18)}...
-            </h3>
-            {blog.tags && blog.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
-                {blog.tags.slice(0, 3).map((tag) => (
-                  <span
-                    key={tag.name}
-                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-serif font-medium bg-amber-50/80 text-amber-800 border border-amber-100 backdrop-blur-sm"
-                  >
-                    <Tag className="h-2.5 w-2.5 shrink-0 text-amber-600" />
-                    <span>{tag.name}</span>
-                  </span>
-                ))}
-                {blog.tags.length > 3 && (
-                  <span className="text-[10px] text-neutral-400 font-serif">+{blog.tags.length - 3}</span>
-                )}
-              </div>
+      {/* Date column */}
+      <div className="hidden md:block w-24 shrink-0 pt-1 font-mono" title={formattedDate}>
+        <p className="text-xs uppercase tracking-[0.08em] text-ink-2">{dateParts.monthDay}</p>
+        <p className="mt-1 text-xs text-muted">{dateParts.year}</p>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        {/* Author line */}
+        <div className="flex items-center gap-2 text-[13px] text-ink-2">
+          <span onClick={goToAuthor} className="cursor-pointer">
+            <Avatar name={authorName} src={authorAvatar || undefined} size={22} />
+          </span>
+          <span onClick={goToAuthor} className="cursor-pointer hover:text-ink hover:underline underline-offset-2 truncate">
+            @{authorName}
+          </span>
+          <span className="md:hidden font-mono text-xs text-muted shrink-0">· {formattedShortDate}</span>
+        </div>
+
+        {/* Title */}
+        <h3 className="mt-2.5 font-serif text-[21px] md:text-[28px] font-medium tracking-tight leading-tight text-ink group-hover:text-accent-ink transition-colors">
+          {blog.title}
+        </h3>
+
+        {/* Excerpt */}
+        {excerpt && (
+          <p className="mt-2.5 text-[15px] leading-relaxed text-ink-2 line-clamp-3">{excerpt}</p>
+        )}
+
+        {/* Footer */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            {blog.tags && blog.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag.name}
+                className="rounded-full px-2.5 py-1 font-mono text-xs bg-surface-2 text-ink-2"
+              >
+                #{tag.name}
+              </span>
+            ))}
+            {blog.tags && blog.tags.length > 3 && (
+              <span className="font-mono text-xs text-muted">+{blog.tags.length - 3}</span>
             )}
           </div>
-        </div>
-        
-        {/* Content */}
-        <div className="p-4 flex flex-col flex-1">
-          {/* Author & Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div onClick={() => navigate(`/profile/${blog.author.id}`)} className='cursor-pointer'>
-                {authorAvatar ? (
-                  <img 
-                    src={authorAvatar} 
-                    alt={authorName}
-                    className="w-8 h-8 rounded-full object-cover border border-amber-200"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center border border-amber-200">
-                    <User className="h-4 w-4 text-amber-600" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex flex-col">
-                <div onClick={() => navigate(`/profile/${blog.author.id}`)} className='cursor-pointer hover:underline'>
-                  <span className="text-xs font-serif font-medium text-amber-900">
-                    @{authorName}
-                  </span>
-                </div>
 
-                <span className="text-[10px] text-neutral-400 font-serif flex items-center space-x-1">
-                  <Calendar className="h-2.5 w-2.5" />
-                  <span>{formattedDate}</span>
-                </span>
-              </div>
-            </div>
+          <div className="flex items-center gap-1 md:gap-3 text-ink-2 -mr-2 md:mr-0">
+            <button
+              onClick={handleLike}
+              disabled={!user || loading}
+              className={`inline-flex items-center gap-1.5 px-2 min-h-[44px] md:min-h-0 md:py-1 rounded-md transition-colors disabled:opacity-60 active:scale-[0.97] ${
+                loading ? 'cursor-wait' : 'cursor-pointer'
+              } ${isLiked ? 'text-accent' : 'hover:text-ink'}`}
+              aria-label={isLiked ? 'Unlike' : 'Like'}
+            >
+              {loading ? (
+                <LoaderIcon className="h-4 w-4 animate-spin" />
+              ) : (
+                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+              )}
+              <span className="font-mono text-xs">{likesCount || 0}</span>
+            </button>
 
-            {/* Actions - Edit & Delete buttons for owner */}
+            <span className="inline-flex items-center gap-1.5 px-2">
+              <MessageCircle className="h-4 w-4" />
+              <span className="font-mono text-xs">{commentsCount}</span>
+            </span>
+
             {isOwner && (
-              <div className="flex items-center space-x-1">
-                <Link
-                  to={`/blogs/edit/${blog.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 border border-amber-200 rounded-full text-[10px] font-serif font-medium text-neutral-700 bg-white hover:bg-amber-50 transition-colors"
+              <>
+                <span
+                  role="link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate(`/blogs/edit/${blog.id}`);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 min-h-[44px] md:min-h-0 md:py-1 rounded-md text-sm text-ink-2 hover:text-ink hover:bg-surface-2 cursor-pointer active:opacity-70"
                 >
-                  <Edit2 className="h-3 w-3" />
+                  <Pencil className="h-3.5 w-3.5" />
                   <span className="max-sm:hidden">Edit</span>
-                </Link>
-                
+                </span>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 border border-red-200 rounded-full text-[10px] font-serif font-medium text-red-600 bg-white hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2 min-h-[44px] md:min-h-0 md:py-1 rounded-md text-sm text-danger hover:bg-danger-soft cursor-pointer disabled:opacity-50 active:opacity-70"
+                  aria-label="Delete"
                 >
-                  {deleting ? (
-                    <LoaderIcon className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <span>Delete</span>
-                  )}
+                  {deleting ? <LoaderIcon className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  <span className="max-sm:hidden">Delete</span>
                 </button>
-              </div>
+              </>
             )}
 
-            {/* Stats for non-owner */}
-            {!isOwner && (
-              <div className="flex items-center space-x-2">
-                {/* Comments */}
-                <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full text-[10px] font-medium text-blue-600 bg-blue-50/60 border border-blue-100">
-                  <MessageCircle className="h-3 w-3 text-blue-500" />
-                  <span className="font-semibold">{commentsCount}</span>
-                </div>
-
-                {/* Like */}
-                <button
-                  onClick={handleLike}
-                  disabled={!user || loading}
-                  className={`inline-flex items-center space-x-1 px-2 py-1 text-[10px] font-medium transition-colors duration-200 disabled:opacity-50 rounded-full ${
-                    loading
-                      ? 'cursor-wait'
-                      : isLiked
-                      ? 'text-red-600 bg-red-50/60 border border-red-100'
-                      : 'text-neutral-500 hover:text-red-600 hover:bg-red-50/30'
-                  }`}
-                  aria-label={isLiked ? 'Unlike' : 'Like'}
-                >
-                  {!loading && <Heart className={`h-4 w-4 ${isLiked ? 'fill-current text-red-600' : ''}`} />}
-                  <span>{loading ? <LoaderIcon className='w-4 h-4 animate-spin' /> :  likesCount || 0}</span>
-                </button>
-
-                {/* Read Full */}
-                <div className="inline-flex items-center space-x-1 text-[10px] font-serif font-semibold text-amber-900 group-hover:text-amber-700 transition-colors">
-                  <span className="max-md:hidden">Read</span>
-                  <ArrowRight className="h-3 w-3 text-amber-600 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </div>
-            )}
+            <span className="hidden sm:inline-flex items-center gap-1 pl-1 text-sm font-medium text-ink group-hover:text-accent-ink transition-colors">
+              Read
+              <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
           </div>
         </div>
       </div>

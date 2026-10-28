@@ -11,7 +11,7 @@ const HorizontalRule = Node.create({
     return [{ tag: 'hr' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['hr', { ...HTMLAttributes, class: 'my-4 border-amber-200' }];
+    return ['hr', { ...HTMLAttributes }];
   },
   addCommands() {
     return {
@@ -29,12 +29,12 @@ export const extensions = [
     },
     codeBlock: {
       HTMLAttributes: {
-        class: 'bg-neutral-50 p-4 rounded-md font-mono text-sm',
+        class: 'font-mono',
       },
     },
     blockquote: {
       HTMLAttributes: {
-        class: 'border-l-4 border-amber-300 pl-4 italic text-neutral-600',
+        class: '',
       },
     },
     horizontalRule: false,
@@ -43,7 +43,7 @@ export const extensions = [
   Link.configure({
     openOnClick: false,
     HTMLAttributes: {
-      class: 'text-amber-700 underline underline-offset-2 hover:text-amber-900',
+      class: 'underline underline-offset-2',
     },
   }),
   Placeholder.configure({

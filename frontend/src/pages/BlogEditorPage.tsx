@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { api } from '../api';
-import { Save, ArrowLeft, Tag, Trash2, RefreshCw, X, Plus } from 'lucide-react';
+import { Check, ArrowLeft, Hash, Trash2, RefreshCw, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { BlogEditor } from '../config/BlogEditor';
 
@@ -148,151 +148,151 @@ export default function BlogEditorPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin text-amber-600" />
-        <p className="text-sm font-medium text-neutral-500 font-mono">Loading article editor...</p>
+      <div className="min-h-dvh bg-bg flex flex-col items-center justify-center gap-3">
+        <RefreshCw className="h-5 w-5 animate-spin text-muted" />
+        <p className="font-mono text-xs text-muted">Loading article editor...</p>
       </div>
     );
   }
 
+  const busy = submitting || deleting;
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <Link
-          to="/blogs"
-          className="inline-flex items-center space-x-1.5 text-sm font-serif font-semibold text-neutral-600 hover:text-neutral-900 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Articles</span>
-        </Link>
-
-        {isEditMode && (
-          <button
-            onClick={handleDelete}
-            disabled={deleting || submitting}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span>{deleting ? 'Deleting...' : 'Delete Post'}</span>
-          </button>
-        )}
-      </div>
-
-      <div className="bg-[#fffefb] border border-amber-200/60 rounded-xl p-6 sm:p-8 shadow-sm">
-        <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-amber-950 mb-6">
-          {isEditMode ? 'Edit Article' : 'Write a New Article'}
-        </h1>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="title" className="block text-sm font-serif font-medium text-amber-900">
-              Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              required
-              disabled={submitting || deleting}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Give your article a compelling title..."
-              className="mt-1 block w-full px-4 py-2.5 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm font-serif bg-white text-neutral-900 disabled:opacity-60 disabled:bg-neutral-50 transition-all duration-200"
-            />
+    <form onSubmit={handleSubmit} className="min-h-dvh bg-bg animate-fade-in">
+      {/* Editor top bar (global header is hidden on this route) */}
+      <div className="sticky top-0 z-30 h-16 border-b border-line bg-bg/90 backdrop-blur">
+        <div className="h-full px-4 md:px-8 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              to="/blogs"
+              className="-ml-2 inline-flex items-center gap-1.5 px-2 min-h-[44px] rounded-lg text-sm font-medium text-ink-2 hover:text-ink active:opacity-70 transition"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span className="max-sm:hidden">Back to Articles</span>
+            </Link>
+            <span className="h-5 w-px bg-line shrink-0" />
+            <span className="font-mono text-xs text-muted truncate">
+              {submitting ? 'Saving...' : deleting ? 'Deleting...' : isEditMode ? 'Editing' : 'New article'}
+            </span>
           </div>
 
-          <div>
-            <label htmlFor="tags" className="block text-sm font-serif font-medium text-amber-900">
-              Tags
-            </label>
-            <div className="mt-1">
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm font-serif font-medium text-amber-800"
-                    >
-                      <Tag className="h-3.5 w-3.5 text-amber-600" />
-                      <span>{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="p-0.5 hover:bg-amber-200 rounded-full transition-colors cursor-pointer"
-                        aria-label={`Remove ${tag}`}
-                      >
-                        <X className="h-3.5 w-3.5 text-amber-600" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Tag className="h-4 w-4 text-amber-700" />
-                  </div>
-                  <input
-                    ref={tagInputRef}
-                    type="text"
-                    id="tags"
-                    disabled={submitting || deleting}
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={tags.length >= 10 ? "Max 10 tags reached" : "Type tag and press Enter..."}
-                    className="block w-full pl-9 pr-3 py-2 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm font-serif bg-white text-neutral-900 disabled:opacity-60 disabled:bg-neutral-50 transition-all duration-200"
-                    maxLength={30}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddTag}
-                  disabled={!tagInput.trim() || tags.length >= 10 || submitting || deleting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-900 text-white rounded-lg text-sm font-serif font-medium hover:bg-amber-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add</span>
-                </button>
-              </div>
-              
-              <p className="mt-1.5 text-xs text-neutral-500 font-serif">
-                Press <kbd className="px-1.5 py-0.5 bg-neutral-100 border border-neutral-200 rounded text-[10px] font-mono">Enter</kbd> to add tag,{' '}
-                <kbd className="px-1.5 py-0.5 bg-neutral-100 border border-neutral-200 rounded text-[10px] font-mono">Backspace</kbd> to remove last tag
-                {tags.length >= 10 && (
-                  <span className="text-amber-600 ml-1">(Maximum 10 tags)</span>
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="content" className="block text-sm font-serif font-medium text-amber-900">
-              Content
-            </label>
-            <BlogEditor 
-              content={content} 
-              onChange={handleContentChange}
-              editable={!submitting && !deleting}
-            />
-          </div>
-
-          <div className="flex justify-end pt-2">
+          <div className="flex items-center gap-2 shrink-0">
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={busy}
+                aria-label={deleting ? 'Deleting...' : 'Delete Post'}
+                title="Delete Post"
+                className="grid place-items-center h-[38px] w-[38px] max-md:h-11 max-md:w-11 rounded-lg border border-line-strong bg-surface text-danger hover:bg-danger-soft active:scale-[0.97] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </button>
+            )}
             <button
               type="submit"
-              disabled={submitting || deleting}
-              className="inline-flex items-center space-x-2 px-6 py-2.5 bg-amber-900 text-white rounded-lg font-serif font-semibold text-sm hover:bg-amber-800 transition-colors cursor-pointer disabled:bg-neutral-300 disabled:cursor-not-allowed shadow-sm"
+              disabled={busy}
+              className="inline-flex items-center gap-2 bg-ink text-bg font-semibold rounded-lg px-4 py-2.5 min-h-[44px] md:min-h-0 text-sm hover:opacity-90 active:scale-[0.97] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              <span>{submitting ? 'Saving...' : isEditMode ? 'Update Article' : 'Publish Article'}</span>
+              {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              <span>
+                {submitting ? 'Saving...' : isEditMode ? (
+                  <>Update<span className="max-sm:hidden"> article</span></>
+                ) : (
+                  <>Publish<span className="max-sm:hidden"> article</span></>
+                )}
+              </span>
             </button>
           </div>
-        </form>
+        </div>
       </div>
-    </div>
+
+      <BlogEditor
+        content={content}
+        onChange={handleContentChange}
+        editable={!submitting && !deleting}
+      >
+        {/* Title */}
+        <label htmlFor="title" className="sr-only">Title</label>
+        <textarea
+          id="title"
+          rows={1}
+          required
+          disabled={busy}
+          value={title}
+          onChange={(e) => setTitle(e.target.value.replace(/\n/g, ' '))}
+          onInput={(e) => {
+            // Fallback auto-grow for browsers without field-sizing support
+            const el = e.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+          }}
+          onKeyDown={(e) => {
+            // Titles are a single line: Enter submits like the old input did
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+          placeholder="Give your article a compelling title..."
+          className="block w-full resize-none [field-sizing:content] overflow-hidden bg-transparent border-0 p-0 font-serif text-[32px] md:text-[48px] leading-[1.15] tracking-tight text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
+        />
+
+        {/* Tags */}
+        <div className="mt-8 border-y border-line py-4">
+          <div className="flex items-start gap-3">
+            <Hash className="h-4 w-4 mt-2 shrink-0 text-muted" />
+            <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full pl-2.5 pr-1 py-1 font-mono text-xs bg-surface-2 text-ink-2"
+                >
+                  <span>#{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="grid place-items-center h-5 w-5 rounded-full text-muted hover:text-ink hover:bg-line cursor-pointer"
+                    aria-label={`Remove ${tag}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <label htmlFor="tags" className="sr-only">Tags</label>
+              <input
+                ref={tagInputRef}
+                type="text"
+                id="tags"
+                disabled={busy}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                enterKeyHint="done"
+                placeholder={tags.length >= 10 ? 'Max 10 tags reached' : 'Add a tag and press Enter'}
+                className="flex-1 min-w-[160px] min-h-[36px] bg-transparent border-0 px-1 text-base md:text-sm text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
+                maxLength={30}
+              />
+            </div>
+            {tagInput.trim() && tags.length < 10 && (
+              <button
+                type="button"
+                onClick={handleAddTag}
+                disabled={busy}
+                className="md:hidden shrink-0 grid place-items-center h-9 w-9 rounded-lg bg-surface-2 text-ink active:scale-[0.97]"
+                aria-label="Add tag"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
+            <span className="shrink-0 mt-2 font-mono text-xs text-muted">{tags.length} / 10</span>
+          </div>
+          <p className="mt-2 pl-7 font-mono text-[11px] text-muted">
+            Enter to add · Backspace to remove last
+            {tags.length >= 10 && <span className="ml-1 text-accent-ink">(Maximum 10 tags)</span>}
+          </p>
+        </div>
+      </BlogEditor>
+    </form>
   );
 }

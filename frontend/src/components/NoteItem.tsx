@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Note, User } from '../types';
-import { Heart, Trash2, Edit2, Check, X, Loader2, Image as ImageIcon, LoaderIcon } from 'lucide-react';
+import { Heart, Trash2, Pencil, Check, X, Loader2, Image as ImageIcon, LoaderIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { Avatar } from './Navbar';
 
 interface NoteItemProps {
   note: Note;
@@ -125,50 +126,70 @@ export default function NoteItem({ note, user, onUpdate, onDelete, onLikeToggle 
     return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${timeStr}`;
   };
 
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      '#8B6B4A', '#A67B5B', '#C4A882', '#B8926B', '#D4B89C',
-      '#9C7B5E', '#BFA28A', '#D9C2B0', '#A68B72', '#C8AE96'
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
+  const iconBtn =
+    'grid h-10 w-10 md:h-8 md:w-8 shrink-0 place-items-center rounded-lg transition-colors active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
-    <div className={`flex w-full items-end gap-2 py-0.5 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-      {!isOwn && (
-        <div className="shrink-0 mb-1">
-          <Link to={`/profile/${note.author.id}`}
-            className="h-8 w-8 rounded-full cursor-pointer flex items-center justify-center text-white text-xs font-serif font-medium"
-            style={{ backgroundColor: getAvatarColor(authorName) }}
-          >
-            {note.author.avatar ? (
-              <img src={note.author.avatar} alt={note.author.username} className='rounded-full' />
-            ) : (
-              authorName.charAt(0).toUpperCase()
-            )}
-          </Link>
-        </div>
-      )}
-
-      <div
-        className={`relative group max-w-[85%] sm:max-w-[75%] px-3 py-1.5 shadow-sm transition-all duration-150 ${
-          isOwn
-            ? 'bg-amber-800 text-white rounded-2xl rounded-tr-sm'
-            : 'bg-[#fffefb] text-amber-950 rounded-2xl rounded-tl-sm border border-amber-200/40'
-        } ${deleting ? 'opacity-50' : ''}`}
+    <div
+      className={`group flex w-full gap-3 transition-opacity ${
+        isOwn ? 'rounded-xl border border-line bg-surface px-3 py-3 md:px-4' : 'px-3 py-3 md:px-4'
+      } ${deleting ? 'opacity-50' : ''}`}
+    >
+      <Link
+        to={`/profile/${note.author.id}`}
+        className="mt-0.5 shrink-0 self-start rounded-full transition-opacity active:opacity-70"
+        aria-label={`${authorName} profile`}
       >
-        {!isOwn && (
-          <span className="block text-xs font-serif font-semibold text-amber-800 mb-0.5">
-            {authorName}
-          </span>
-        )}
+        <Avatar name={authorName} src={note.author.avatar || undefined} size={36} />
+      </Link>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-[3px]">
+            <Link
+              to={`/profile/${note.author.id}`}
+              className="truncate text-[14px] font-semibold text-ink hover:underline underline-offset-2"
+            >
+              @{authorName}
+            </Link>
+            {isOwn && (
+              <span className="rounded bg-surface-2 px-1.5 py-px font-mono text-[10px] uppercase tracking-[0.08em] text-ink-2">
+                you
+              </span>
+            )}
+            <span className="font-mono text-[12px] text-muted">{formatTime(note.createdAt)}</span>
+          </div>
+
+          {canEditDelete && !isEditing && (
+            <div className="-mr-1.5 -mt-1 flex shrink-0 items-center gap-0.5 md:-mt-0.5">
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                disabled={deleting}
+                aria-label="Edit note"
+                className={`${iconBtn} text-muted hover:bg-surface-2 hover:text-ink`}
+              >
+                <Pencil className="h-4 w-4 md:h-[15px] md:w-[15px]" />
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                aria-label="Delete note"
+                className={`${iconBtn} text-danger hover:bg-danger-soft`}
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 md:h-[15px] md:w-[15px] animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 md:h-[15px] md:w-[15px]" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
 
         {isEditing ? (
-          <div className="space-y-2 min-w-[160px] sm:min-w-[200px]">
+          <div className="mt-2 space-y-2">
             <textarea
               ref={textareaRef}
               rows={1}
@@ -176,53 +197,58 @@ export default function NoteItem({ note, user, onUpdate, onDelete, onLikeToggle 
               value={editingText}
               onChange={handleEditInputChange}
               onKeyDown={handleKeyDown}
-              className="w-full border border-amber-200/40 rounded-lg bg-[#faf8f5] px-3 py-2 text-base sm:text-sm font-serif focus:outline-none focus:ring-1 focus:ring-amber-700 focus:border-amber-700 disabled:opacity-60 resize-none overflow-hidden transition-all text-amber-950 max-h-40"
-              style={{ minHeight: '40px' }}
+              className="block max-h-40 w-full resize-none overflow-hidden rounded-lg border-[1.5px] border-accent bg-bg px-3 py-2 text-[15px] leading-relaxed text-ink outline-none transition-colors placeholder:text-muted disabled:opacity-60"
+              style={{ minHeight: '44px' }}
               placeholder="Edit note..."
             />
 
-            <div className="flex justify-end gap-1.5">
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                disabled={saving}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 border rounded-lg text-xs font-serif font-medium transition-all cursor-pointer disabled:opacity-50 ${
-                  isOwn
-                    ? 'border-amber-700/40 text-amber-200 hover:bg-amber-800'
-                    : 'border-amber-200/40 text-amber-700 hover:bg-amber-50'
-                }`}
-              >
-                <X className="h-3.5 w-3.5" />
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={saving || !editingText.trim() || editingText.trim() === note.content}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-900 hover:bg-amber-800 text-white rounded-lg text-xs font-serif font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Check className="h-3.5 w-3.5" />
-                )}
-                Save
-              </button>
+            <div className="flex items-center justify-between gap-2">
+              <span className="hidden font-mono text-[11px] text-muted sm:inline">Esc to cancel · Enter to save</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                  className="inline-flex h-10 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink active:scale-[0.97] disabled:opacity-50 md:h-8"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={saving || !editingText.trim() || editingText.trim() === note.content}
+                  className="inline-flex h-10 items-center gap-1 rounded-lg bg-ink px-3.5 text-[13px] font-semibold text-bg transition-[opacity,transform] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 md:h-8"
+                >
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <>
+            {note.content && (
+              <div className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-ink">
+                {note.content}
+              </div>
+            )}
+
+            {!note.content && imageUrl && (
+              <div className="mt-1 text-[13px] italic text-muted">Shared an image</div>
+            )}
+
             {imageUrl && (
-              <div className="relative rounded-lg overflow-hidden bg-[#faf8f5] max-w-full">
+              <div className="relative mt-2.5 max-w-[420px] overflow-hidden rounded-xl border border-line bg-surface-2">
                 {!imageLoaded && !imageError && (
-                  <div className="flex items-center justify-center h-32 bg-[#faf8f5]">
-                    <LoaderIcon className="h-6 w-6 animate-spin text-amber-600" />
+                  <div className="flex h-32 items-center justify-center">
+                    <LoaderIcon className="h-5 w-5 animate-spin text-muted" />
                   </div>
                 )}
                 <img
                   src={imageUrl}
                   alt={note.content || 'Note image'}
-                  className={`w-full max-h-[400px] object-contain rounded-lg transition-opacity duration-300 ${
+                  className={`block max-h-[400px] w-full object-contain transition-opacity duration-300 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
@@ -233,85 +259,38 @@ export default function NoteItem({ note, user, onUpdate, onDelete, onLikeToggle 
                   loading="lazy"
                 />
                 {imageError && (
-                  <div className="flex flex-col items-center justify-center p-6 text-amber-700/40">
-                    <ImageIcon className="h-8 w-8 mb-1 text-amber-700/30" />
-                    <p className="text-xs font-serif">Failed to load image</p>
+                  <div className="flex flex-col items-center justify-center p-6 text-muted">
+                    <ImageIcon className="mb-1 h-7 w-7" strokeWidth={1.5} />
+                    <p className="font-mono text-[11px]">Failed to load image</p>
                   </div>
                 )}
               </div>
             )}
 
-            {note.content && (
-              <div className={`text-sm leading-relaxed break-words whitespace-pre-wrap font-serif ${isOwn ? 'text-white' : 'text-amber-950'}`}>
-                {note.content}
-              </div>
-            )}
-
-            {!note.content && imageUrl && (
-              <div className={`text-xs font-serif ${isOwn ? 'text-white/60' : 'text-amber-700/40'} italic`}>
-                Shared an image
-              </div>
-            )}
-          </div>
-        )}
-
-        {!isEditing && (
-          <div className={`flex items-center justify-between mt-1 pt-1 border-t ${isOwn ? 'border-white/20' : 'border-amber-200/30'}`}>
-            <div className="flex items-center gap-0.5">
+            <div className="-ml-2 mt-1.5 flex items-center">
               <button
+                type="button"
                 onClick={toggleLike}
                 disabled={liking || !user}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg transition-all text-xs font-serif ${
+                aria-pressed={liked}
+                aria-label={liked ? 'Unlike note' : 'Like note'}
+                className={`inline-flex h-10 min-w-[44px] items-center gap-1.5 rounded-lg px-2 transition-colors active:scale-[0.97] md:h-8 ${
                   !user
-                    ? 'opacity-50 cursor-not-allowed'
+                    ? 'cursor-not-allowed opacity-50'
                     : liked
-                    ? 'text-red-500'
-                    : isOwn
-                    ? 'text-white/60 hover:text-white hover:bg-white/10'
-                    : 'text-amber-700/40 hover:text-amber-900 hover:bg-amber-50'
+                    ? 'text-accent hover:bg-accent-soft'
+                    : 'text-muted hover:bg-surface-2 hover:text-ink'
                 }`}
               >
-                {!liking && <Heart className={`h-4 w-4 ${liked ? 'fill-current text-red-600' : ''}`} />}
-                <span>{liking ? <LoaderIcon className='w-4 h-4 animate-spin' /> : note.likes?.length || 0}</span>
+                {liking ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+                )}
+                <span className="font-mono text-[12px]">{note.likes?.length || 0}</span>
               </button>
-
-              {canEditDelete && (
-                <>
-                  <div className={`w-px h-4 ${isOwn ? 'bg-white/20' : 'bg-amber-200/30'} mx-0.5`} />
-                  <button
-                    onClick={handleStartEdit}
-                    disabled={deleting}
-                    className={`p-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
-                      isOwn
-                        ? 'text-white/40 hover:text-white hover:bg-white/10'
-                        : 'text-amber-700/40 hover:text-amber-900 hover:bg-amber-50'
-                    }`}
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className={`p-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
-                      isOwn
-                        ? 'text-white/40 hover:text-red-400 hover:bg-white/10'
-                        : 'text-amber-700/40 hover:text-red-500 hover:bg-amber-50'
-                    }`}
-                  >
-                    {deleting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </>
-              )}
             </div>
-
-            <span className={`text-[10px] font-mono ${isOwn ? 'text-white/50' : 'text-amber-700/30'}`}>
-              {formatTime(note.createdAt)}
-            </span>
-          </div>
+          </>
         )}
       </div>
     </div>

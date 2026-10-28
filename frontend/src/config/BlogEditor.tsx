@@ -8,17 +8,25 @@ interface BlogEditorProps {
   content: string;
   onChange: (content: string) => void;
   editable?: boolean;
+  /** Rendered between the sticky toolbar and the writing surface (e.g. title + tags). */
+  children?: React.ReactNode;
 }
 
 export const BlogEditor: React.FC<BlogEditorProps> = ({
   content,
   onChange,
   editable = true,
+  children,
 }) => {
   const editor = useEditor({
     extensions,
     content: content || '<p>Write your story...</p>',
     editable,
+    editorProps: {
+      attributes: {
+        class: 'prose min-h-[50vh] focus:outline-none',
+      },
+    },
     onUpdate: ({ editor }) => {
       const json = editor.getJSON();
       onChange(JSON.stringify(json));
@@ -39,26 +47,25 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({
     }
   }, [content, editor]);
 
-  if (!editor) {
-    return (
-      <div className="mt-1">
-        <div className="border border-amber-200 rounded-lg p-8 bg-white text-center">
-          <div className="animate-pulse text-neutral-400">Loading editor...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="blog-editor-container mt-1">
-      <div className="blog-editor-wrapper border border-amber-200 rounded-lg overflow-hidden bg-white focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-all duration-200">
-        <EditorToolbar editor={editor} />
-        <div className="blog-editor-content">
-          <EditorContent
-            editor={editor}
-            className="blog-editor-field min-h-[400px] px-4 py-3 focus:outline-none text-neutral-900 font-serif"
-          />
-        </div>
+    <div className="blog-editor-container">
+      {/* Sticky formatting toolbar, full width under the editor top bar */}
+      <div className="sticky top-16 z-20 bg-surface border-b border-line">
+        {editor ? (
+          <EditorToolbar editor={editor} />
+        ) : (
+          <div className="h-12" aria-hidden />
+        )}
+      </div>
+
+      <div className="max-w-[720px] mx-auto px-5 md:px-0 py-10 md:py-14">
+        {children}
+
+        {editor ? (
+          <EditorContent editor={editor} className="blog-editor-field mt-8" />
+        ) : (
+          <div className="mt-8 min-h-[400px] font-mono text-xs text-muted animate-pulse">Loading editor...</div>
+        )}
       </div>
     </div>
   );

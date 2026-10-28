@@ -2,9 +2,25 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../api';
 import { Comment, Blog } from '../types';
-import { MessageSquare, Send, Edit2, Trash2 } from 'lucide-react';
+import { Send } from 'lucide-react';
+import { Avatar } from './Navbar';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+
+// Short relative time ("5m ago"), falling back to an absolute date after a week
+const formatCommentTime = (dateStr?: string): string => {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  const diff = Math.max(0, Date.now() - date.getTime());
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 interface CommentSectionProps {
   blog: Blog;
@@ -90,62 +106,72 @@ export default function CommentSection({ blog, comments, setComments }: CommentS
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center space-x-2">
-        <MessageSquare className="h-5 w-5 text-neutral-850" />
-        <h2 className="text-xl font-bold tracking-tight text-neutral-900 font-serif">
-          Comments ({comments?.length || 0})
-        </h2>
+    <section id="comments" className="border-t border-line pt-10 mt-12 scroll-mt-[calc(var(--header-h)+16px)]">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="font-serif text-[28px] tracking-tight text-ink">Discussion</h2>
+        <span className="font-mono text-xs text-muted">
+          {comments?.length || 0} {(comments?.length || 0) === 1 ? 'comment' : 'comments'}
+        </span>
       </div>
 
-      {user ? (
-        user.role !== 'ADMIN' && (
-          <form onSubmit={handleAddComment} className="bg-white border border-amber-200/50 rounded-lg p-4 space-y-3">
-            <textarea
-              rows={3}
-              required
-              disabled={commentSubmitting}
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              placeholder="Join the discussion. Write your comment..."
-              className="block w-full px-3 py-2 border border-amber-200 focus:ring-1 focus:ring-amber-500 focus:border-amber-500 rounded-lg focus:outline-none text-sm text-neutral-800 bg-white disabled:opacity-60 disabled:bg-neutral-50"
-            />
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={commentSubmitting || !commentInput.trim()}
-                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-amber-900 text-white rounded font-semibold text-xs hover:bg-amber-800 cursor-pointer disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors shadow-sm"
-              >
-                <Send className="h-3 w-3" />
-                <span>{commentSubmitting ? 'Posting...' : 'Post Comment'}</span>
-              </button>
-            </div>
-          </form>
-        )
-      ) : (
-        <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 text-center">
-          <p className="text-sm text-neutral-600 font-serif">
-            Please{' '}
-            <Link to="/auth/signin" className="font-semibold text-amber-955 underline">
-              sign in
-            </Link>{' '}
-            to add comments to this blog.
-          </p>
-        </div>
-      )}
+      <div className="mt-6">
+        {user ? (
+          user.role !== 'ADMIN' && (
+            <form
+              onSubmit={handleAddComment}
+              className="bg-surface border border-line-strong rounded-xl p-3.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition"
+            >
+              <textarea
+                rows={3}
+                required
+                disabled={commentSubmitting}
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                placeholder="Join the discussion. Write your comment..."
+                className="block w-full resize-none bg-transparent border-0 p-1 text-base md:text-[15px] leading-relaxed text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={commentSubmitting || !commentInput.trim()}
+                  className="inline-flex items-center gap-2 bg-ink text-bg font-semibold rounded-lg px-4 py-2.5 text-sm min-h-[44px] md:min-h-0 hover:opacity-90 active:scale-[0.97] transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  <span>{commentSubmitting ? 'Posting...' : 'Post comment'}</span>
+                </button>
+              </div>
+            </form>
+          )
+        ) : (
+          <div className="bg-surface-2 rounded-xl p-4 text-center">
+            <p className="text-sm text-ink-2">
+              Please{' '}
+              <Link to="/auth/signin" className="font-semibold text-ink underline underline-offset-2">
+                sign in
+              </Link>{' '}
+              to add comments to this blog.
+            </p>
+          </div>
+        )}
+      </div>
 
-      <div className="space-y-4">
+      <div className="mt-8 divide-y divide-line">
         {comments && comments.length > 0 ? (
           comments.map((comment) => {
             const commentAuthorName =
               typeof comment.author === 'object' && comment.author ? comment.author.username : 'Anonymous';
             const commentAuthorId =
               typeof comment.author === 'object' && comment.author ? comment.author.id : '';
+            const commentAuthorAvatar =
+              typeof comment.author === 'object' && comment.author && 'avatar' in comment.author
+                ? (comment.author as { avatar?: string }).avatar
+                : undefined;
             const canEditComment = user && user.id === commentAuthorId && user.role !== 'ADMIN';
             const canDeleteComment = user && (user.id === commentAuthorId || user.role === 'ADMIN');
             const isEditing = editingCommentId === comment.id;
 
-            const commentDate = comment.createdAt
+            const commentDate = formatCommentTime(comment.createdAt);
+            const commentDateTitle = comment.createdAt
               ? new Date(comment.createdAt).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
@@ -154,78 +180,78 @@ export default function CommentSection({ blog, comments, setComments }: CommentS
               : 'Unknown';
 
             return (
-              <div key={comment.id} className="bg-white border border-amber-200 rounded-lg p-4 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between text-xs text-neutral-500">
-                  <div className="flex items-center space-x-1.5 font-sans font-medium text-amber-955">
-                    <div className="h-6 w-6 rounded-full bg-amber-100 flex items-center justify-center font-bold text-[10px] text-amber-800">
-                      {(commentAuthorName || 'A').charAt(0).toUpperCase()}
+              <div key={comment.id} className="flex gap-3 py-5">
+                <Avatar name={commentAuthorName} src={commentAuthorAvatar || undefined} size={30} className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-baseline gap-2 min-w-0">
+                      <span className="truncate text-sm font-semibold text-ink">@{commentAuthorName}</span>
+                      <span className="shrink-0 font-mono text-xs text-muted" title={commentDateTitle}>
+                        {commentDate}
+                      </span>
                     </div>
-                    <span>@{commentAuthorName}</span>
-                    <span className="text-neutral-400 font-normal">({commentDate})</span>
+
+                    {!isEditing && (canEditComment || canDeleteComment) && (
+                      <div className="flex items-center gap-1 shrink-0 -mr-2">
+                        {canEditComment && (
+                          <button
+                            onClick={() => handleStartEditComment(comment.id, comment.content)}
+                            disabled={!!deletingCommentId}
+                            className="px-2 min-h-[36px] md:min-h-0 md:py-1 rounded-md text-xs font-medium text-ink-2 hover:text-ink hover:bg-surface-2 cursor-pointer active:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {canDeleteComment && (
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            disabled={!!deletingCommentId}
+                            className="px-2 min-h-[36px] md:min-h-0 md:py-1 rounded-md text-xs font-medium text-danger hover:bg-danger-soft cursor-pointer active:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deletingCommentId === comment.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {!isEditing && (
-                    <div className="flex items-center space-x-2">
-                      {canEditComment && (
+                  {isEditing ? (
+                    <div className="mt-2">
+                      <textarea
+                        rows={3}
+                        disabled={savingCommentId === comment.id}
+                        value={editingCommentText}
+                        onChange={(e) => setEditingCommentText(e.target.value)}
+                        className="block w-full resize-none rounded-lg bg-surface border border-accent ring-2 ring-accent/20 px-3 py-2 text-base md:text-[15px] leading-relaxed text-ink focus:outline-none disabled:opacity-60"
+                      />
+                      <div className="mt-2 flex gap-2 justify-end">
                         <button
-                          onClick={() => handleStartEditComment(comment.id, comment.content)}
-                          disabled={!!deletingCommentId}
-                          className="text-neutral-500 hover:text-amber-900 flex items-center space-x-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={handleCancelEditComment}
+                          disabled={savingCommentId === comment.id}
+                          className="px-3 py-2 rounded-lg text-sm font-medium text-ink-2 hover:text-ink hover:bg-surface-2 cursor-pointer active:opacity-70 disabled:opacity-50"
                         >
-                          <Edit2 className="h-3 w-3" />
-                          <span>Edit</span>
+                          Cancel
                         </button>
-                      )}
-                      {canDeleteComment && (
                         <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          disabled={!!deletingCommentId}
-                          className="text-red-500 hover:text-red-700 flex items-center space-x-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => handleSaveComment(comment.id)}
+                          disabled={savingCommentId === comment.id || !editingCommentText.trim()}
+                          className="px-3.5 py-2 rounded-lg bg-ink text-bg text-sm font-semibold hover:opacity-90 cursor-pointer active:scale-[0.97] transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          <Trash2 className="h-3 w-3" />
-                          <span>{deletingCommentId === comment.id ? 'Deleting...' : 'Delete'}</span>
+                          {savingCommentId === comment.id ? 'Saving...' : 'Save'}
                         </button>
-                      )}
+                      </div>
                     </div>
+                  ) : (
+                    <p className="mt-1.5 text-[15px] leading-relaxed text-ink whitespace-pre-wrap break-words">
+                      {comment.content}
+                    </p>
                   )}
                 </div>
-
-                {isEditing ? (
-                  <div className="space-y-2">
-                    <textarea
-                      rows={2}
-                      disabled={savingCommentId === comment.id}
-                      value={editingCommentText}
-                      onChange={(e) => setEditingCommentText(e.target.value)}
-                      className="block w-full px-3 py-2 border border-amber-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 text-sm text-neutral-800 disabled:opacity-60 disabled:bg-neutral-50"
-                    />
-                    <div className="flex space-x-2 justify-end">
-                      <button
-                        onClick={handleCancelEditComment}
-                        disabled={savingCommentId === comment.id}
-                        className="px-2.5 py-1.5 border border-neutral-300 rounded text-xs font-semibold text-neutral-750 hover:bg-neutral-50 cursor-pointer disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleSaveComment(comment.id)}
-                        disabled={savingCommentId === comment.id || !editingCommentText.trim()}
-                        className="px-2.5 py-1.5 bg-amber-900 text-white rounded text-xs font-semibold hover:bg-amber-850 cursor-pointer disabled:bg-neutral-300"
-                      >
-                        {savingCommentId === comment.id ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed font-serif">
-                    {comment.content}
-                  </p>
-                )}
               </div>
             );
           })
         ) : (
-          <p className="text-neutral-550 text-sm font-serif text-center py-6 bg-white border border-amber-100 rounded-lg">
+          <p className="py-10 text-center text-sm text-muted">
             No comments yet. Be the first to share your thoughts!
           </p>
         )}

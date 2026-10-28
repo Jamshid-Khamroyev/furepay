@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../api';
 import BlogCard from '../components/BlogCard';
-import { Search, Plus, X, TrendingUp, Tag, LoaderIcon, Clock, History, Flame } from 'lucide-react';
+import { Search, Plus, X, TrendingUp, LoaderIcon, Clock, History, Flame, PenLine } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Blog } from '../types';
 import { toast } from 'sonner';
@@ -212,18 +212,43 @@ export default function BlogsPage() {
     .map(([name]) => name);
 
   const isFiltered = activeView !== 'default';
+  const isFreeUser = !!user && user.role !== 'ADMIN' && user.plan !== 'PREMIUM';
+  const myBlogsCount = user && blogs.length > 0
+    ? blogs.filter((b) => typeof b.author === 'object' && b.author && b.author.id === user.id).length
+    : null;
+
+  const tagChip = (tag: string) => {
+    const isActive = activeView === 'tag' && activeTag === tag;
+    return (
+      <button
+        key={tag}
+        onClick={() => fetchByTag(tag)}
+        className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 font-mono text-xs transition-colors cursor-pointer active:scale-[0.97] max-md:min-h-[36px] max-md:px-3 ${
+          isActive ? 'bg-ink text-bg' : 'bg-surface-2 text-ink-2 hover:text-ink'
+        }`}
+      >
+        #{tag}
+      </button>
+    );
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-amber-200/60 pb-6">
-        <div>
-          <h1 className="text-3xl font-serif font-extrabold tracking-tight text-amber-950">Articles & Insights</h1>
-          <p className="text-neutral-600 font-serif mt-1">Explore thoughts, articles, and discussions from our members.</p>
+    <div className="max-w-[1440px] mx-auto px-4 md:px-24 pt-8 md:pt-14 pb-20 animate-fade-in">
+      {/* Intro */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div className="max-w-2xl">
+          <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent-ink">Blogs · Public feed</p>
+          <h1 className="mt-3 font-serif text-[34px] md:text-[56px] leading-[1.05] tracking-tight text-ink">
+            Articles &amp; Insights
+          </h1>
+          <p className="mt-3 text-ink-2 text-[15px] md:text-base">
+            Explore thoughts, articles, and discussions from our members.
+          </p>
         </div>
         {user && (
           <Link
             to="/blogs/new"
-            className="inline-flex items-center space-x-1 px-4 py-2 bg-amber-900 text-white rounded font-serif font-medium text-sm hover:bg-amber-800 self-start md:self-auto shrink-0 transition-colors shadow-sm"
+            className="hidden md:inline-flex items-center gap-2 shrink-0 bg-ink text-bg font-semibold rounded-lg px-4 py-2.5 text-sm hover:opacity-90 active:scale-[0.97] transition"
           >
             <Plus className="h-4 w-4" />
             <span>Create Article</span>
@@ -231,114 +256,146 @@ export default function BlogsPage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-4 bg-[#fffefb] border border-amber-500 p-4 md:p-5 rounded-xl shadow-sm">
-        <div className="flex flex-col xl:grid xl:grid-cols-[380px_1fr] gap-4 xl:gap-6">
-          <form onSubmit={handleSearch} className="flex flex-col gap-2 w-full xl:space-y-3">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-amber-700" />
-              </div>
+      {/* Toolbar */}
+      <div className="mt-8 md:mt-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-line pb-5">
+        <form onSubmit={handleSearch} className="relative w-full md:w-[420px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <input
+            type="text"
+            placeholder="Search by title or contents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full h-[44px] md:h-[42px] pl-9 pr-3 rounded-lg bg-surface border border-line-strong text-base md:text-sm text-ink placeholder:text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition"
+          />
+          <button type="submit" className="sr-only">Search</button>
+        </form>
 
-              <input
-                type="text"
-                placeholder="Search by title or contents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-9 pr-3 py-2 border border-amber-400 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 text-base sm:text-sm font-serif text-neutral-900"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="px-4 py-2 bg-amber-900 border border-amber-200 rounded-lg text-sm font-serif font-medium text-amber-50 hover:bg-amber-950 cursor-pointer xl:w-full"
-            >
-              Search
-            </button>
-          </form>
-
-          <div className="space-y-4">
-
-            <div className="grid grid-cols-4 xl:flex xl:flex-wrap items-center md:gap-2 gap-1 border-b border-gray-300 py-2">
-              {FILTER_OPTIONS.map((option) => {
-                const Icon = option.icon;
-                const isActive =
-                  activeView === "filter" &&
-                  activeFilter === option.type;
-
-                return (
-                  <button
-                    key={option.type}
-                    onClick={() => fetchByFilter(option.type)}
-                    className={`flex justify-center items-center gap-1.5 md:px-3 px-1 py-1.5 rounded-lg border transition-colors cursor-pointer ${
-                      isActive
-                        ? "bg-amber-900 text-white border-amber-900"
-                        : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
-                    }`}
-                  >
-                    <Icon className="md:h-3.5 md:w-3.5 h-2 w-2 xl:h-4 xl:w-4" />
-                    <span className="text-[10px] xl:text-sm">
-                      {option.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {availableTags.length > 0 && (
-              <div className="grid grid-cols-3 xl:flex xl:flex-wrap items-center md:gap-2 gap-1 border-b border-gray-300 py-2">
-                {availableTags.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => fetchByTag(tag)}
-                    className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-serif font-semibold border transition-colors cursor-pointer ${
-                      activeView === "tag" && activeTag === tag
-                        ? "bg-amber-900 text-white border-amber-900"
-                        : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
-                    }`}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isFiltered && (
-              <div className="flex xl:justify-end">
+        {/* Segmented control (desktop) / chip row (phone) */}
+        <div className="-mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2 md:gap-0 md:inline-flex md:bg-surface-2 md:p-[3px] md:rounded-[9px]">
+            {FILTER_OPTIONS.map((option) => {
+              const isActive = activeView === 'filter' && activeFilter === option.type;
+              return (
                 <button
-                  onClick={handleClearFilters}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-serif font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 cursor-pointer"
+                  key={option.type}
+                  onClick={() => fetchByFilter(option.type)}
+                  className={`shrink-0 inline-flex items-center justify-center text-sm cursor-pointer transition active:scale-[0.97] max-md:min-h-[40px] max-md:px-4 max-md:rounded-full max-md:border md:px-3.5 md:py-1.5 md:rounded-[7px] ${
+                    isActive
+                      ? 'font-semibold max-md:bg-ink max-md:text-bg max-md:border-ink md:bg-surface md:shadow-sm md:text-ink'
+                      : 'max-md:bg-surface max-md:border-line-strong text-ink-2 hover:text-ink'
+                  }`}
                 >
-                  <X className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
-                  <span>Clear Filters</span>
+                  {option.label}
                 </button>
-              </div>
-            )}
+              );
+            })}
           </div>
-
         </div>
       </div>
 
-      {blogsLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-          <LoaderIcon className="h-4 w-4 animate-spin text-amber-600" />
-          <p className="text-sm font-medium text-neutral-600 font-mono">Fetching latest blogs...</p>
+      {/* Tag row (phones / tablets) */}
+      {(availableTags.length > 0 || isFiltered) && (
+        <div className="lg:hidden -mx-4 px-4 md:mx-0 md:px-0 mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {availableTags.map(tagChip)}
+          {isFiltered && (
+            <button
+              onClick={handleClearFilters}
+              className="shrink-0 inline-flex items-center gap-1 px-2 min-h-[36px] text-sm text-ink-2 underline underline-offset-4 cursor-pointer active:opacity-70"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </button>
+          )}
         </div>
-      ) : displayBlogs.length === 0 ? (
-        <div className="text-center py-20 border border-dashed border-amber-200 rounded-lg bg-[#fffefb]">
-          <p className="text-amber-900 font-serif text-lg">No blog posts found matching your criteria.</p>
-          <button
-            onClick={handleClearFilters}
-            className="mt-4 inline-flex items-center space-x-1 px-4 py-2 border border-amber-200 rounded-lg text-sm font-serif font-medium text-amber-950 bg-amber-50 hover:bg-amber-100 cursor-pointer"
-          >
-            Reset All Filters
-          </button>
+      )}
+
+      <div className="mt-2 lg:mt-6 flex flex-col lg:flex-row gap-10 lg:gap-16">
+        {/* List */}
+        <div className="flex-1 min-w-0">
+          {blogsLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3">
+              <LoaderIcon className="h-5 w-5 animate-spin text-muted" />
+              <p className="font-mono text-xs text-muted">Fetching latest blogs...</p>
+            </div>
+          ) : displayBlogs.length === 0 ? (
+            <div className="text-center py-24 border-b border-line">
+              <p className="font-serif text-xl text-ink">No blog posts found matching your criteria.</p>
+              <button
+                onClick={handleClearFilters}
+                className="mt-5 inline-flex items-center px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-lg bg-surface border border-line-strong text-sm font-medium text-ink hover:bg-surface-2 cursor-pointer active:scale-[0.97] transition"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          ) : (
+            <div>
+              {displayBlogs.map((blog) => (
+                <BlogCard key={blog.id} blog={blog} setBlogs={setDisplayBlogs} onLikeToggle={handleLikeToggle} />
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayBlogs.map((blog) => (
-            <BlogCard key={blog.id} blog={blog} setBlogs={setDisplayBlogs} onLikeToggle={handleLikeToggle} />
-          ))}
-        </div>
+
+        {/* Right rail */}
+        <aside className="w-full lg:w-[320px] shrink-0 space-y-10 lg:pt-7">
+          {availableTags.length > 0 && (
+            <section className="hidden lg:block">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Browse by tag</h2>
+              <div className="mt-4 flex flex-wrap gap-2">{availableTags.map(tagChip)}</div>
+              {isFiltered && (
+                <button
+                  onClick={handleClearFilters}
+                  className="mt-4 text-sm text-ink-2 underline underline-offset-4 hover:text-ink cursor-pointer"
+                >
+                  Clear filters
+                </button>
+              )}
+            </section>
+          )}
+          {availableTags.length === 0 && isFiltered && (
+            <button
+              onClick={handleClearFilters}
+              className="hidden lg:inline text-sm text-ink-2 underline underline-offset-4 hover:text-ink cursor-pointer"
+            >
+              Clear filters
+            </button>
+          )}
+
+          {isFreeUser && (
+            <section>
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Your writing</h2>
+              <div className="mt-4 bg-surface border border-line rounded-xl p-5">
+                {myBlogsCount !== null && (
+                  <p className="font-serif text-4xl tracking-tight text-ink">
+                    {myBlogsCount} <span className="text-muted">/ 5</span>
+                  </p>
+                )}
+                <p className={`${myBlogsCount !== null ? 'mt-2 ' : ''}text-sm leading-relaxed text-ink-2`}>
+                  Free plan users can create up to 5 blogs and 5 tags per blog. Upgrade to write without limits.
+                </p>
+                <Link
+                  to="/profile"
+                  className="mt-4 inline-flex items-center justify-center w-full rounded-lg bg-accent text-on-accent font-semibold text-sm px-4 py-2.5 min-h-[44px] md:min-h-0 hover:opacity-90 active:scale-[0.97] transition"
+                >
+                  Upgrade to Pro
+                </Link>
+              </div>
+            </section>
+          )}
+        </aside>
+      </div>
+
+      {/* Phone extended FAB */}
+      {user && (
+        <Link
+          to="/blogs/new"
+          aria-label="Create Article"
+          style={{ bottom: 'calc(var(--nav-h) + 16px)' }}
+          className="md:hidden fixed right-4 z-30 inline-flex items-center gap-2 h-14 px-5 rounded-2xl bg-ink text-bg font-semibold shadow-lg active:scale-[0.97] transition"
+        >
+          <PenLine className="h-5 w-5" />
+          <span>Write</span>
+        </Link>
       )}
     </div>
   );

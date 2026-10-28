@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../api';
 import NoteItem from '../components/NoteItem';
-import { Send, Image, X, LoaderIcon, RefreshCw } from 'lucide-react';
+import { ArrowUp, ImagePlus, X, LoaderIcon, RefreshCw, MessageSquareText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { socket } from '../config/socket';
@@ -293,86 +293,113 @@ export default function NotesPage() {
   },[socket])
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#faf8f5]">
-      <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-3 max-w-6xl mx-auto w-full">
-        {notesLoading ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <LoaderIcon className="h-5 w-5 animate-spin text-amber-600" />
-          </div>
-        ) : (
-          <>
-            {sortedNotes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="bg-[#fffefb] rounded-2xl p-8 shadow-sm border border-amber-200/40 max-w-sm w-full">
-                  <div className="text-5xl mb-4">📭</div>
-                  <p className="text-amber-950 font-serif font-medium">No notes yet</p>
-                  <p className="text-sm text-amber-700/60 font-serif mt-1">Write your first note below</p>
-                </div>
+    <div className="fixed inset-x-0 top-[var(--header-h)] bottom-[var(--nav-h)] flex flex-col overflow-hidden bg-bg">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overscroll-contain"
+      >
+        <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-3 py-3 md:px-0">
+          {notesLoading ? (
+            <div className="flex flex-1 items-center justify-center">
+              <LoaderIcon className="h-5 w-5 animate-spin text-muted" />
+            </div>
+          ) : sortedNotes.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+              <span className="mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-muted">
+                <MessageSquareText className="h-6 w-6" strokeWidth={1.75} />
+              </span>
+              <p className="font-serif text-[22px] font-medium text-ink">No notes yet</p>
+              <p className="mt-1 text-sm text-muted">Write your first note below</p>
+            </div>
+          ) : (
+            <>
+              <div className="mt-auto flex justify-center py-3">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore || !hasMore}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 text-[13px] font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  {loadingMore ? (
+                    <LoaderIcon className="h-4 w-4 animate-spin" />
+                  ) : hasMore ? (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Load older notes
+                    </>
+                  ) : (
+                    <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">No more notes</span>
+                  )}
+                </button>
               </div>
-            ) : (
-              <>
-                {sortedNotes.length > 0 && (
-                  <div className="flex justify-center py-4">
-                    <button
-                      onClick={loadMore}
-                      disabled={loadingMore || !hasMore}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 hover:bg-amber-100/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {loadingMore ? (
-                        <>
-                          <LoaderIcon className="h-4 w-4 animate-spin" />
-                        </>
-                      ) : hasMore ? (
-                        <>
-                          <RefreshCw className="h-4 w-4" />
-                        </>
-                      ) : (
-                        'No more notes'
-                      )}
-                    </button>
-                  </div>
-                )}
-                {sortedNotes.map((note) => (
-                  <div key={note.id} className="mb-3">
-                    <NoteItem
-                      note={note}
-                      user={user}
-                      onUpdate={handleUpdateNote}
-                      onDelete={handleDeleteNote}
-                      onLikeToggle={handleLikeToggle}
-                    />
-                  </div>
-                ))}
-              </>
-            )}
-          </>
-        )}
+
+              {sortedNotes.map((note, idx) => {
+                const prev = sortedNotes[idx - 1];
+                const showDay = !prev || dayKey(prev.createdAt) !== dayKey(note.createdAt);
+                return (
+                  <React.Fragment key={note.id}>
+                    {showDay && <DaySeparator date={note.createdAt} />}
+                    <div className="mb-1.5">
+                      <NoteItem
+                        note={note}
+                        user={user}
+                        onUpdate={handleUpdateNote}
+                        onDelete={handleDeleteNote}
+                        onLikeToggle={handleLikeToggle}
+                      />
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </>
+          )}
+        </div>
       </div>
 
-      <div
-        className="bg-[#fffefb] border-t border-gray-200 px-3 pt-2 flex-shrink-0"
-        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
-      >
-        <div className="max-w-6xl mx-auto">
+      <div className="flex-shrink-0 border-t border-line bg-surface px-3 py-2.5 md:px-4 md:pb-4">
+        <div className="mx-auto max-w-[760px]">
           <form onSubmit={handleSubmit}>
             {imagePreview && (
-              <div className="relative inline-block mb-2">
+              <div className="mb-2.5 flex items-center gap-3 rounded-xl border border-line bg-bg p-2 pr-1.5">
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="h-20 w-20 rounded-lg object-cover border border-amber-200/40"
+                  className="h-14 w-14 shrink-0 rounded-lg border border-line object-cover"
                 />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium text-ink">{selectedImage?.name || 'Image'}</p>
+                  <p className="mt-0.5 font-mono text-[11px] text-muted">
+                    {selectedImage ? formatBytes(selectedImage.size) : ''} · max 5 MB
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors"
+                  aria-label="Remove image"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink active:scale-[0.97]"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             )}
 
-            <div className="flex items-end gap-2 bg-[#faf8f5] border border-amber-200/40 rounded-2xl px-3 py-1.5">
+            <div className="flex items-end gap-1.5 rounded-[24px] border border-line-strong bg-bg p-1 md:rounded-xl md:p-1.5">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                className="hidden"
+                id="image-upload"
+              />
+              <label
+                htmlFor="image-upload"
+                aria-label="Attach image"
+                className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink active:scale-[0.97] md:h-10 md:w-10 md:rounded-lg"
+              >
+                <ImagePlus className="h-5 w-5" strokeWidth={1.75} />
+              </label>
+
               <textarea
                 ref={inputRef}
                 rows={1}
@@ -381,42 +408,62 @@ export default function NotesPage() {
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Write a note..."
-                className="flex-1 bg-transparent border-0 outline-none resize-none py-2 text-base sm:text-sm text-amber-950 placeholder-amber-700/40 font-serif min-h-[40px] max-h-32"
+                className="max-h-32 min-h-[44px] flex-1 resize-none border-0 bg-transparent py-[11px] text-[15px] leading-[22px] text-ink outline-none placeholder:text-muted md:min-h-[40px] md:py-[9px]"
                 style={{ height: 'auto' }}
               />
 
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageSelect}
-                  accept="image/*"
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label
-                  htmlFor="image-upload"
-                  className="p-2 rounded-full hover:bg-amber-100/50 cursor-pointer transition-colors"
-                >
-                  <Image className="h-5 w-5 text-amber-700/60" />
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={submitting || (!noteInput.trim() && !selectedImage)}
-                  className="p-2 rounded-full bg-amber-900 text-white hover:bg-amber-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {submitting ? (
-                    <LoaderIcon className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Send className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
+              <button
+                type="submit"
+                aria-label="Send note"
+                disabled={submitting || (!noteInput.trim() && !selectedImage)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-on-accent transition-[opacity,transform] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 md:h-10 md:w-10 md:rounded-lg"
+              >
+                {submitting ? (
+                  <LoaderIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <ArrowUp className="h-5 w-5" strokeWidth={2.25} />
+                )}
+              </button>
             </div>
           </form>
         </div>
       </div>
     </div>
   );
+}
+
+function dayKey(dateStr?: string) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toDateString();
+}
+
+function dayLabel(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}),
+  });
+}
+
+function DaySeparator({ date }: { date: string }) {
+  return (
+    <div className="my-3 flex items-center gap-3 px-1" role="separator">
+      <span className="h-px flex-1 bg-line" />
+      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">{dayLabel(date)}</span>
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  );
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

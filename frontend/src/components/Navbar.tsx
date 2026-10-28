@@ -1,170 +1,230 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { BookOpen, StickyNote, User as UserIcon, LogOut, LogIn, UserPlus, Users, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { BookOpen, StickyNote, User as UserIcon, LogOut, Users, PenLine, Moon, Sun, LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { toast } from 'sonner';
+import { socket } from '../config/socket';
+import { useTheme } from '../hooks/useTheme';
 
 export const logo = "/image.png";
+
+type NavItem = { path: string; label: string; icon: LucideIcon };
+
+export function useNavLinks(): NavItem[] {
+  const { user } = useStore();
+  if (user?.role === 'ADMIN') {
+    return [
+      { path: '/admin/notes', label: 'Notes', icon: StickyNote },
+      { path: '/admin/blogs', label: 'Blogs', icon: BookOpen },
+      { path: '/admin/users', label: 'Users', icon: Users },
+    ];
+  }
+  return [
+    ...(user ? [{ path: '/', label: 'Notes', icon: StickyNote }] : []),
+    { path: '/blogs', label: 'Blogs', icon: BookOpen },
+    ...(user ? [{ path: '/profile', label: 'Profile', icon: UserIcon }] : []),
+  ];
+}
+
+export function Logo({ to = '/' }: { to?: string }) {
+  return (
+    <Link to={to} className="flex items-center gap-2.5 shrink-0">
+      <span className="grid h-7 w-7 place-items-center rounded-[7px] bg-accent text-on-accent">
+        <PenLine className="h-[15px] w-[15px]" strokeWidth={2.25} />
+      </span>
+      <span className="font-serif text-[23px] font-semibold tracking-[-0.02em] text-ink leading-none">furepay</span>
+    </Link>
+  );
+}
+
+export function ThemeToggle({ className = '' }: { className?: string }) {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      className={`grid h-9 w-9 place-items-center rounded-lg text-ink-2 transition-colors hover:bg-surface-2 active:scale-95 ${className}`}
+    >
+      {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+    </button>
+  );
+}
+
+function useSocketStatus() {
+  const [online, setOnline] = useState(socket.connected);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    socket.on('connect', on);
+    socket.on('disconnect', off);
+    return () => {
+      socket.off('connect', on);
+      socket.off('disconnect', off);
+    };
+  }, []);
+  return online;
+}
 
 export default function Navbar() {
   const { user, logout } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navLinks = useNavLinks();
+  const online = useSocketStatus();
+  const isAdmin = user?.role === 'ADMIN';
 
   const handleLogout = async () => {
     try {
-      const { data } = await api.post('/api/user/logout')
-      if(data.success){
+      const { data } = await api.post('/api/user/logout');
+      if (data.success) {
         await logout();
         navigate('/auth/signin');
       }
-      setMobileMenuOpen(false);
-    } catch (error) {
-      toast.error(error.response.data.message)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Logout failed');
     }
   };
 
-  const isActive = (path: string) => location.pathname === path;
-  const isAdmin = user?.role === 'ADMIN';
-
-  // Navigation links
-  const getNavLinks = () => {
-    if (isAdmin) {
-      return [
-        { path: '/admin/notes', label: 'Notes', icon: StickyNote },
-        { path: '/admin/blogs', label: 'Blogs', icon: BookOpen },
-        { path: '/admin/users', label: 'Users', icon: Users },
-      ];
-    }
-    return [
-      ...(user ? [{ path: '/', label: 'Notes', icon: StickyNote }] : []),
-      { path: '/blogs', label: 'Blogs', icon: BookOpen },
-      ...(user ? [{ path: '/profile', label: 'Profile', icon: UserIcon }] : []),
-    ];
-  };
-
-  const navLinks = getNavLinks();
+  // The editor has its own full-screen top bar
+  if (location.pathname.startsWith('/blogs/new') || location.pathname.startsWith('/blogs/edit')) return null;
+  // Auth pages are full-bleed
+  if (location.pathname.startsWith('/auth')) return null;
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#fbfaf3] font-medium border-b border-amber-900/90">
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 max-md:border-b">
-          {/* Logo */}
-          <Link 
-            to={isAdmin ? "/admin/blogs" : "/"} 
-            className="flex items-center space-x-2 shrink-0"
-          >
-            <img alt='logo' src={logo} className='h-28 w-44'/>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navLinks.map(({ path, label }) => (
-              <Link
+    <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur-md pt-safe">
+      <div className="mx-auto flex h-[var(--header-h)] max-w-[1440px] items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-4 md:gap-10">
+          <Logo to={isAdmin ? '/admin/blogs' : '/'} />
+          {isAdmin && (
+            <span className="rounded-[5px] bg-ink px-2 py-[3px] font-mono text-[10px] font-semibold tracking-[0.1em] text-bg">
+              ADMIN
+            </span>
+          )}
+          <nav className="hidden items-center gap-1 md:flex">
+            {navLinks.map(({ path, label, icon: Icon }) => (
+              <NavLink
                 key={path}
                 to={path}
-                className={`px-3 py-2 text-sm font-serif font-medium rounded-lg transition-colors ${
-                  isActive(path)
-                    ? 'bg-amber-900 text-amber-100'
-                    : 'text-neutral-600 hover:bg-amber-50 hover:text-neutral-900'
-                }`}
+                end
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    isActive ? 'bg-surface-2 font-semibold text-ink' : 'font-medium text-ink-2 hover:bg-surface-2/60 hover:text-ink'
+                  }`
+                }
               >
-                {label}
-              </Link>
+                {({ isActive }) => (
+                  <>
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-ink' : 'text-muted'}`} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
             ))}
-          </div>
+          </nav>
+        </div>
 
-          {/* Right section */}
-          <div className="flex items-center space-x-3">
-            {user ? (
-              <>
-                {/* User info - desktop */}
-                <div className="hidden md:flex items-center space-x-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-full">
-                  <UserIcon className="h-4 w-4 text-amber-700" />
-                  <span className="text-sm font-medium text-neutral-800">{user.username}</span>
-                  {isAdmin && (
-                    <span className="text-[10px] uppercase font-bold bg-amber-600 text-white px-1.5 py-0.5 rounded">
-                      Admin
-                    </span>
-                  )}
-                </div>
-
-                {/* Logout - desktop */}
-                <button
-                  onClick={handleLogout}
-                  className="hidden md:inline-flex items-center space-x-1 px-3 py-2 border border-amber-200 rounded-lg text-sm font-serif font-medium text-amber-900 bg-amber-50/50 hover:bg-amber-100 transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
-                </button>
-
-                {/* Mobile menu button */}
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-2 rounded-lg hover:bg-amber-50 transition-colors"
-                >
-                  {mobileMenuOpen ? (
-                    <X className="h-6 w-6 text-amber-900" />
-                  ) : (
-                    <Menu className="h-6 w-6 text-amber-900" />
-                  )}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/auth/signin"
-                  className="hidden sm:inline-flex items-center space-x-1 px-3 py-2 text-sm font-medium text-neutral-700 hover:text-neutral-900"
-                >
-                  <LogIn className="h-4 w-4" />
-                  <span>Sign In</span>
+        <div className="flex items-center gap-1 md:gap-4">
+          {user ? (
+            <>
+              <div className="hidden items-center gap-1.5 md:flex" title={online ? 'Real-time updates connected' : 'Reconnecting…'}>
+                <span className={`h-[7px] w-[7px] rounded-full ${online ? 'bg-success' : 'bg-muted'}`} />
+                <span className="font-mono text-xs text-muted">{online ? 'Live' : 'Offline'}</span>
+              </div>
+              <span className="hidden h-5 w-px bg-line md:block" />
+              {isAdmin ? (
+                <span className="hidden font-mono text-xs text-muted md:block">{user.email}</span>
+              ) : (
+                <Link to="/profile" className="hidden items-center gap-2.5 md:flex">
+                  <Avatar name={user.username} src={user.avatar} size={32} />
+                  <span className="flex flex-col leading-tight">
+                    <span className="text-[13px] font-semibold text-ink">{user.username}</span>
+                    <span className="font-mono text-[11px] text-muted">{user.plan === 'PREMIUM' ? 'Premium' : 'Free plan'}</span>
+                  </span>
                 </Link>
-                <Link
-                  to="/auth/signup"
-                  className="inline-flex items-center space-x-1 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors shadow-sm"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Sign Up</span>
-                  <span className="sm:hidden">Join</span>
-                </Link>
-              </>
-            )}
-          </div>
+              )}
+              <ThemeToggle />
+              <button
+                onClick={handleLogout}
+                aria-label="Logout"
+                className="grid h-9 w-9 place-items-center rounded-lg text-ink-2 transition-colors hover:bg-surface-2 active:scale-95 md:border md:border-line"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <ThemeToggle />
+              <Link
+                to="/auth/signin"
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-ink-2 hover:text-ink sm:inline-flex"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/auth/signup"
+                className="inline-flex items-center rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-bg transition-transform active:scale-[0.97]"
+              >
+                <span className="hidden sm:inline">Sign Up</span>
+                <span className="sm:hidden">Join</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
+    </header>
+  );
+}
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && user && (
-        <div className="md:hidden border-t border-amber-100 bg-[#fbfaf3] px-4 py-4 space-y-2 animate-slide-down">
-          {/* Navigation links - mobile */}
-          {navLinks.map(({ path, label, icon: Icon }) => (
-            <Link
-              key={path}
-              to={path}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-serif font-medium transition-colors ${
-                isActive(path)
-                  ? 'bg-amber-900 text-amber-100'
-                  : 'text-neutral-600 hover:bg-amber-900 hover:text-neutral-50'
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span>{label}</span>
-            </Link>
-          ))}
+export function Avatar({ name, src, size = 32, className = '' }: { name?: string; src?: string; size?: number; className?: string }) {
+  const initial = (name || '?').trim().charAt(0).toUpperCase();
+  const style = { width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.4)) };
+  if (src) {
+    return <img src={src} alt={name} style={style} className={`shrink-0 rounded-full object-cover ${className}`} />;
+  }
+  return (
+    <span style={style} className={`grid shrink-0 place-items-center rounded-full bg-accent-soft font-semibold text-accent-ink ${className}`}>
+      {initial}
+    </span>
+  );
+}
 
-          {/* Logout - mobile */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-3 py-2.5 rounded-lg text-sm font-serif font-medium text-red-600 hover:bg-red-50 transition-colors mt-2 border-t border-amber-100 pt-3"
+/** Android-style bottom navigation, shown on phones only */
+export function BottomNav() {
+  const { user } = useStore();
+  const navLinks = useNavLinks();
+  const location = useLocation();
+
+  if (!user) return null;
+  if (location.pathname.startsWith('/blogs/new') || location.pathname.startsWith('/blogs/edit')) return null;
+  // Article pages use their own bottom action bar on phones
+  if (/^\/blogs\/[^/]+$/.test(location.pathname)) return null;
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md pb-safe md:hidden">
+      <div className="flex h-16 items-stretch px-2">
+        {navLinks.map(({ path, label, icon: Icon }) => (
+          <NavLink
+            key={path}
+            to={path}
+            end
+            className="flex flex-1 flex-col items-center justify-center gap-1 active:opacity-70"
           >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      )}
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`grid h-8 w-16 place-items-center rounded-full transition-colors duration-200 ${
+                    isActive ? 'bg-accent-soft text-accent-ink' : 'text-ink-2'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 2} />
+                </span>
+                <span className={`text-xs ${isActive ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   );
 }

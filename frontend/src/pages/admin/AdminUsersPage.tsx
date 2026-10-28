@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
 import { User } from '../../types';
-import { 
-  Shield, Mail, Calendar, UserCheck, RefreshCw, Ban, 
-  CheckCircle, Search, FileText, MessageCircle, Heart, 
-  Award, Clock, Users, AlertCircle, Eye
+import {
+  RefreshCw, Search, FileText, MessageCircle, Heart,
+  Award, AlertCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Avatar } from '../../components/Navbar';
 
 interface UserWithCount extends User {
   _count?: {
@@ -18,6 +18,8 @@ interface UserWithCount extends User {
     likes: number;
   };
 }
+
+const GRID_COLS = 'md:grid-cols-[minmax(0,2.4fr)_88px_118px_104px_150px_120px_96px]';
 
 export default function AdminUsersPage() {
   const { user } = useStore();
@@ -83,10 +85,6 @@ export default function AdminUsersPage() {
     });
   };
 
-  const getInitials = (username: string) => {
-    return username.charAt(0).toUpperCase();
-  };
-
   const filteredUsers = (usersList || []).filter((u) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -104,186 +102,175 @@ export default function AdminUsersPage() {
 
   if (usersLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="h-6 w-6 animate-spin text-amber-600" />
-          <p className="text-sm text-neutral-500">Loading users...</p>
+          <RefreshCw className="h-5 w-5 animate-spin text-muted" />
+          <p className="font-mono text-[13px] text-muted">Loading users...</p>
         </div>
       </div>
     );
   }
 
+  const RolePill = ({ role }: { role?: string }) => (
+    <span
+      className={`inline-flex items-center rounded-md px-2 py-[3px] font-mono text-[11px] font-semibold ${
+        role === 'ADMIN' ? 'bg-ink text-bg' : 'bg-surface-2 text-ink-2'
+      }`}
+    >
+      {role || 'USER'}
+    </span>
+  );
+
+  const PlanPill = ({ plan }: { plan?: string }) => {
+    const premium = !!plan && plan !== 'FREE';
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-md px-2 py-[3px] font-mono text-[11px] font-semibold ${
+          premium ? 'bg-accent-soft text-accent-ink' : 'bg-surface-2 text-ink-2'
+        }`}
+      >
+        {premium && <Award className="h-3 w-3" />}
+        {getPlanLabel(plan || 'FREE')}
+      </span>
+    );
+  };
+
+  const Status = ({ blocked }: { blocked?: boolean }) => (
+    <span className="inline-flex items-center gap-2 text-[13px] text-ink">
+      <span className={`h-[7px] w-[7px] rounded-full ${blocked ? 'bg-danger' : 'bg-success'}`} />
+      {blocked ? 'Blocked' : 'Active'}
+    </span>
+  );
+
+  const Activity = ({ u }: { u: UserWithCount }) => (
+    <span className="inline-flex items-center gap-3 font-mono text-[12px] text-muted">
+      <span className="inline-flex items-center gap-1" title="Articles">
+        <FileText className="h-3 w-3" />
+        {u._count?.blogs || 0}
+      </span>
+      <span className="inline-flex items-center gap-1" title="Comments">
+        <MessageCircle className="h-3 w-3" />
+        {u._count?.comments || 0}
+      </span>
+      <span className="inline-flex items-center gap-1" title="Likes">
+        <Heart className="h-3 w-3" />
+        {u._count?.likes || 0}
+      </span>
+    </span>
+  );
+
+  const ActionButton = ({ u, block }: { u: UserWithCount; block?: boolean }) => {
+    return (
+      <button
+        onClick={() => handleToggleBlock(u.id, !!u.isBlocked, u.username)}
+        disabled={togglingBlockId === u.id}
+        className={`inline-flex cursor-pointer items-center justify-center rounded-lg px-3 text-[13px] font-semibold transition-[transform,opacity] hover:opacity-85 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 ${
+          block ? 'h-11 min-w-[88px]' : 'h-8 min-w-[72px]'
+        } ${u.isBlocked ? 'bg-surface-2 text-ink' : 'bg-danger-soft text-danger'}`}
+      >
+        {togglingBlockId === u.id ? (
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+        ) : u.isBlocked ? (
+          'Unblock'
+        ) : (
+          'Block'
+        )}
+      </button>
+    );
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="mx-auto max-w-[1440px] px-4 pb-20 pt-8 md:px-16 md:pt-12">
+      {/* Intro */}
+      <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-amber-600" />
-            Users
-          </h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Manage user accounts and permissions</p>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-ink">Admin · Users</p>
+          <h1 className="mt-2 font-serif text-[34px] leading-tight tracking-[-0.01em] text-ink md:text-[44px]">Users</h1>
+          <p className="mt-1 text-[15px] text-ink-2">Manage user accounts and permissions</p>
         </div>
-        
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+
+        <div className="relative w-full md:w-[340px]">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white"
+            className="h-12 w-full rounded-xl border border-line-strong bg-surface pl-10 pr-3.5 text-[14px] text-ink placeholder:text-muted outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20 md:h-[42px] md:rounded-lg"
             placeholder="Search users..."
           />
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Total', value: stats.total, icon: Users, color: 'text-neutral-600' },
-          { label: 'Active', value: stats.active, icon: UserCheck, color: 'text-emerald-600' },
-          { label: 'Blocked', value: stats.blocked, icon: Ban, color: 'text-red-600' },
-          { label: 'Admins', value: stats.admins, icon: Shield, color: 'text-amber-600' },
-        ].map((stat, idx) => (
-          <div key={idx} className="bg-white border border-neutral-200 rounded-lg px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{stat.label}</span>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </div>
-            <p className="text-2xl font-semibold text-neutral-900 mt-0.5">{stat.value}</p>
-          </div>
-        ))}
+      <div className="mb-6 flex flex-wrap gap-x-8 gap-y-2 font-mono text-[12px] text-muted">
+        <span><span className="font-semibold text-ink">{stats.total}</span> total</span>
+        <span><span className="font-semibold text-ink">{stats.active}</span> active</span>
+        <span><span className="font-semibold text-ink">{stats.blocked}</span> blocked</span>
+        <span><span className="font-semibold text-ink">{stats.admins}</span> admins</span>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">User</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Plan</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Activity</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Joined</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((usr) => (
-                  <tr key={usr.id} className="hover:bg-neutral-50/50 transition-colors">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-semibold text-xs flex-shrink-0">
-                          {getInitials(usr.username)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-neutral-900">@{usr.username}</p>
-                          {usr.bio && (
-                            <p className="text-xs text-neutral-400 truncate max-w-[120px]">{usr.bio}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-neutral-600 text-xs">{usr.email}</span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                        usr.role === 'ADMIN' 
-                          ? 'bg-amber-100 text-amber-800' 
-                          : 'bg-neutral-100 text-neutral-600'
-                      }`}>
-                        {usr.role === 'ADMIN' && <Shield className="h-3 w-3" />}
-                        {usr.role || 'USER'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                        usr.plan && usr.plan !== 'FREE'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-neutral-100 text-neutral-500'
-                      }`}>
-                        {usr.plan && usr.plan !== 'FREE' && <Award className="h-3 w-3" />}
-                        {getPlanLabel(usr.plan || 'FREE')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-3 text-xs text-neutral-500">
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          {usr._count?.blogs || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="h-3 w-3" />
-                          {usr._count?.comments || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="h-3 w-3" />
-                          {usr._count?.likes || 0}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-neutral-500 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(usr.createdAt)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {usr.isBlocked ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600">
-                          <Ban className="h-3 w-3" />
-                          Blocked
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-600">
-                          <CheckCircle className="h-3 w-3" />
-                          Active
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => handleToggleBlock(usr.id, !!usr.isBlocked, usr.username)}
-                        disabled={togglingBlockId === usr.id}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                          usr.isBlocked
-                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
-                        }`}
-                      >
-                        {togglingBlockId === usr.id ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin mx-1" />
-                        ) : usr.isBlocked ? (
-                          'Unblock'
-                        ) : (
-                          'Block'
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
-                    <AlertCircle className="h-8 w-8 text-neutral-300 mx-auto mb-2" />
-                    <p className="text-sm text-neutral-500">No users found</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      <div className="overflow-hidden rounded-xl border border-line bg-surface">
+        {/* Desktop header */}
+        <div className={`hidden items-center gap-4 bg-surface-2 px-5 py-3 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:grid ${GRID_COLS}`}>
+          <span>User</span>
+          <span>Role</span>
+          <span>Plan</span>
+          <span>Status</span>
+          <span>Activity</span>
+          <span>Joined</span>
+          <span className="text-right">Action</span>
         </div>
+
+        {filteredUsers.length > 0 ? (
+          <ul>
+            {filteredUsers.map((usr, idx) => (
+              <li key={usr.id} className={idx === 0 ? 'max-md:border-t-0 border-t border-line' : 'border-t border-line'}>
+                {/* Desktop row */}
+                <div className={`hidden items-center gap-4 px-5 py-3.5 md:grid ${GRID_COLS}`}>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar name={usr.username} src={usr.avatar} size={32} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-semibold text-ink">@{usr.username}</p>
+                      <p className="truncate font-mono text-[12px] text-muted">{usr.email}</p>
+                    </div>
+                  </div>
+                  <div>{RolePill({ role: usr.role })}</div>
+                  <div>{PlanPill({ plan: usr.plan })}</div>
+                  <div>{Status({ blocked: usr.isBlocked })}</div>
+                  <div>{Activity({ u: usr })}</div>
+                  <span className="font-mono text-[13px] text-ink-2">{usr.createdAt ? formatDate(usr.createdAt) : '—'}</span>
+                  <div className="text-right">{ActionButton({ u: usr })}</div>
+                </div>
+
+                {/* Phone row */}
+                <div className="flex items-center gap-3 px-4 py-4 md:hidden">
+                  <Avatar name={usr.username} src={usr.avatar} size={40} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold text-ink">@{usr.username}</p>
+                    <p className="truncate font-mono text-[12px] text-muted">{usr.email}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {RolePill({ role: usr.role })}
+                      {PlanPill({ plan: usr.plan })}
+                      {Status({ blocked: usr.isBlocked })}
+                    </div>
+                  </div>
+                  {ActionButton({ u: usr, block: true })}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="border-t border-line px-5 py-14 text-center max-md:border-t-0">
+            <AlertCircle className="mx-auto mb-2 h-7 w-7 text-line-strong" />
+            <p className="text-[14px] text-muted">No users found</p>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-4 text-xs text-neutral-400">
+      <div className="mt-4 flex items-center justify-between gap-4 font-mono text-[12px] text-muted">
         <span>Showing {filteredUsers.length} of {usersList.length} users</span>
-        {searchQuery && <span>Filtered by: "{searchQuery}"</span>}
+        {searchQuery && <span className="truncate">Filtered by: "{searchQuery}"</span>}
       </div>
     </div>
   );

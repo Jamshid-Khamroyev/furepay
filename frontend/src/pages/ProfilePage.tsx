@@ -1,15 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { User as UserIcon, Mail, Book, Check, Key, Calendar, Shield, BadgeCheck, LoaderIcon } from 'lucide-react';
+import { User as UserIcon, Mail, Check, Lock, LoaderIcon, Crown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '../api';
-import { ArrowUpRight, Crown } from "lucide-react";
+import { Avatar } from '../components/Navbar';
 
+const fieldClass =
+  'block h-[52px] w-full rounded-xl border border-line-strong bg-surface pl-10 pr-3.5 text-[15px] text-ink placeholder:text-muted outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20 md:h-11 md:rounded-lg';
+
+function FactRow({ label, value, title }: { label: string; value: React.ReactNode; title?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-t border-line py-3">
+      <span className="text-[13px] text-muted">{label}</span>
+      <span title={title} className="min-w-0 truncate font-mono text-[13px] font-medium text-ink">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function PremiumBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-accent-soft px-2 py-[3px] text-accent-ink">
+      <Crown className="h-3.5 w-3.5" />
+      <span className="font-mono text-[11px] font-semibold tracking-[0.08em]">PREMIUM</span>
+    </span>
+  );
+}
 
 export default function ProfilePage() {
   const { user, signup } = useStore();
-  
+
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState('');
@@ -66,159 +88,182 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-      <div className="border-b border-amber-200/60 pb-6">
-        <h1 className="text-3xl font-serif font-extrabold tracking-tight text-amber-955">Your Account Settings</h1>
-        <p className="text-neutral-600 font-serif mt-1">Manage public profile attributes, login details, and biography information.</p>
-      </div>
+  const isPremium = user.plan === 'PREMIUM';
+  const planLabel = user.plan || 'FREE';
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-        <div className="bg-[#fffefb] border border-amber-200/60 rounded-xl p-6 space-y-4 shadow-sm">
-          <div className="flex flex-col items-center text-center space-y-3">
-            {user.avatar ? (
-              <div className="h-16 w-16 bg-amber-900 text-white rounded-full flex items-center justify-center font-bold text-2xl font-sans">
-                <img src={user.avatar} alt={user.username} className='rounded-full' />
+  return (
+    <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-8 md:px-24 md:pt-14 animate-fade-in">
+      <header className="mb-8 md:mb-12">
+        <h1 className="font-serif text-[32px] leading-tight tracking-[-0.01em] text-ink md:text-[48px]">
+          Your Account Settings
+        </h1>
+        <p className="mt-2 max-w-[560px] text-[15px] text-ink-2">
+          Manage public profile attributes, login details, and biography information.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[380px_1fr] lg:gap-12">
+        <div className="space-y-4 lg:space-y-6">
+          {/* Phone: compact identity row */}
+          <div className="flex items-center gap-3.5 lg:hidden">
+            <Avatar name={user.username} src={user.avatar} size={52} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="truncate font-serif text-[20px] leading-tight text-ink">{user.username || 'user'}</p>
+                {isPremium && <Crown className="h-4 w-4 shrink-0 text-accent" />}
               </div>
-            ) : (
-            <div className="h-16 w-16 bg-amber-900 text-white rounded-full flex items-center justify-center font-bold text-2xl font-sans">
-              {(user?.username || 'U').charAt(0).toUpperCase()}
-            </div>
-            )}
-            <div>
-              <h3 className="font-serif font-bold text-lg text-amber-950">@{user?.username || 'user'}</h3>
-              <p className="text-xs font-mono text-neutral-500">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'recently'}</p>
+              <p className="truncate font-mono text-[12px] text-muted">
+                {user.email || '—'} · {planLabel}
+              </p>
             </div>
           </div>
 
-          <div className="border-t border-amber-100 pt-4 space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-neutral-500">Role</span>
-              <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-105 text-amber-900 border border-amber-200/40">
-                {user?.role || 'user'}
-              </span>
+          {/* Desktop: identity panel */}
+          <section className="hidden rounded-[14px] border border-line bg-surface p-7 lg:block">
+            <div className="flex items-center gap-4 pb-5">
+              <Avatar name={user.username} src={user.avatar} size={64} />
+              <div className="min-w-0">
+                <h2 className="truncate font-serif text-[24px] leading-tight text-ink">{user.username || 'user'}</h2>
+                <p className="truncate text-[14px] text-muted">{user.email || '—'}</p>
+              </div>
             </div>
+            {isPremium && (
+              <div className="pb-4">
+                <PremiumBadge />
+              </div>
+            )}
+            <FactRow label="Role" value={user.role || 'USER'} />
+            <FactRow label="Plan" value={planLabel} />
+            {user.createdAt && (
+              <FactRow
+                label="Member since"
+                value={new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              />
+            )}
+            <FactRow label="User ID" value={<span className="block max-w-[200px] truncate">{user.id || '—'}</span>} title={user.id} />
+          </section>
 
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-neutral-500">User Plan</span>
-              <span className="text-amber-900 text-sm font-semibold font-mono truncate max-w-[140px]">{user.plan || 'FREE'}</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-neutral-500">Email</span>
-              <span className="text-amber-900 font-medium truncate max-w-[210px]">{user?.email || '—'}</span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-neutral-500">User ID</span>
-              <span className="text-amber-900/60 text-[10px] font-mono truncate max-w-[216px]">{user?.id || '—'}</span>
-            </div>
-            
-            {user.plan !== 'PREMIUM' && (
+          {!isPremium && (
+            <>
+              {/* Phone: dark row button */}
               <button
                 onClick={upgradePro}
-                className="group flex items-center cursor-pointer! gap-3 rounded-xl border border-amber-300 bg-amber-50 px-5 w-full py-3 font-medium text-amber-900 transition-all duration-200 hover:border-amber-400 hover:bg-amber-100"
+                className="flex min-h-[64px] w-full cursor-pointer items-center gap-3.5 rounded-[14px] bg-ink px-4 py-3 text-left transition-transform active:scale-[0.97] lg:hidden"
               >
-                <div className="rounded-lg bg-amber-500 p-2 text-white">
-                  {loading ? <LoaderIcon className='h-4 w-4 animate-spin'/> : <Crown className="h-4 w-4" />}
-                </div>
-              
-                <div className="text-left">
-                  <p className="text-sm font-semibold">
-                    Upgrade to Pro
-                  </p>
-                  <p className="text-xs text-amber-700">
-                    Unlock all premium features
-                  </p>
-                </div>
-              
-                <ArrowUpRight className="ml-auto h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent text-on-accent">
+                  {loading ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold text-bg">Upgrade to Pro</span>
+                  <span className="block text-[13px] text-line-strong">Unlimited articles and tags</span>
+                </span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-line-strong" />
               </button>
-            )}
-          </div>
+
+              {/* Desktop: upgrade panel */}
+              <section className="hidden rounded-[14px] bg-ink p-7 lg:block">
+                <div className="flex items-center gap-2 text-accent">
+                  <Crown className="h-4 w-4" />
+                  <span className="font-mono text-[12px] font-semibold tracking-[0.08em]">PREMIUM</span>
+                </div>
+                <p className="mt-3 font-serif text-[28px] leading-tight text-bg">Write without limits.</p>
+                <ul className="mt-5 space-y-2.5">
+                  {[
+                    'Unlimited articles (Free: 5)',
+                    'Unlimited tags per article (Free: 5)',
+                    'Premium badge on your profile',
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-[14px] text-line-strong">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={upgradePro}
+                  className="mt-7 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-accent text-[15px] font-semibold text-on-accent transition-[transform,opacity] hover:opacity-90 active:scale-[0.97]"
+                >
+                  {loading ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+                  Upgrade with Stripe
+                </button>
+              </section>
+            </>
+          )}
         </div>
 
-        <div className="md:col-span-2 bg-[#fffefb] border border-amber-200/60 rounded-xl p-6 sm:p-8 space-y-6 shadow-sm">
-          <h2 className="text-xl font-serif font-bold tracking-tight text-amber-950 border-b border-amber-100 pb-4">
-            Edit Public Profile
-          </h2>
+        <section className="rounded-[14px] border border-line bg-surface p-5 md:p-8">
+          <h2 className="font-serif text-[24px] leading-tight text-ink">Edit public profile</h2>
 
           {success && (
-            <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-lg flex items-start space-x-2 text-sm animate-fade-in">
-              <Check className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+            <div className="mt-5 flex items-center gap-2 rounded-lg bg-success-soft px-3.5 py-3 text-[14px] text-success animate-fade-in">
+              <Check className="h-4 w-4 shrink-0" />
               <span>Profile updated successfully!</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
             <div>
-              <label htmlFor="username" className="block text-sm font-serif font-medium text-amber-950">
+              <label htmlFor="username" className="mb-1.5 block text-[13px] font-medium text-ink-2">
                 Username
               </label>
-              <div className="mt-1 relative rounded-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserIcon className="h-4 w-4 text-amber-700" />
-                </div>
+              <div className="relative">
+                <UserIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   id="username"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2 border border-amber-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 text-sm font-serif bg-white text-neutral-900"
+                  className={fieldClass}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-serif font-medium text-amber-950">
+              <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-ink-2">
                 Email address
               </label>
-              <div className="mt-1 relative rounded-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-amber-700" />
-                </div>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                 <input
                   type="email"
                   id="email"
                   disabled
                   value={email}
-                  className="block w-full pl-9 pr-3 py-2 border border-amber-200 rounded-lg bg-amber-50/50 text-amber-700/60 text-sm font-serif cursor-not-allowed"
+                  className="block h-[52px] w-full cursor-not-allowed rounded-xl border border-line bg-surface-2 pl-10 pr-10 text-[15px] text-muted outline-none md:h-11 md:rounded-lg"
                 />
+                <Lock className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               </div>
-              <p className="mt-1 text-xs text-amber-700/40 font-serif">Email address cannot be changed</p>
+              <p className="mt-1.5 text-[12px] text-muted">Email address cannot be changed</p>
             </div>
 
             <div>
-              <label htmlFor="bio" className="block text-sm font-serif font-medium text-amber-950">
-                Profile Biography
+              <label htmlFor="bio" className="mb-1.5 block text-[13px] font-medium text-ink-2">
+                Bio
               </label>
-              <div className="mt-1 relative rounded-md">
-                <div className="absolute inset-y-0 left-0 pl-3 pt-2 pointer-events-none">
-                  <Book className="h-4 w-4 text-amber-700" />
-                </div>
-                <textarea
-                  id="bio"
-                  rows={4}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2 border border-amber-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 text-sm font-serif bg-white text-neutral-900"
-                  placeholder="Tell us about yourself..."
-                />
-              </div>
+              <textarea
+                id="bio"
+                rows={5}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="block w-full resize-y rounded-xl border border-line-strong bg-surface px-3.5 py-3 text-[15px] leading-relaxed text-ink placeholder:text-muted outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20 md:rounded-lg"
+                placeholder="Tell us about yourself..."
+              />
             </div>
-            
-            <div className="flex justify-end pt-4 border-t border-amber-100">
+
+            <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[13px] text-muted">Changes are visible on your public profile.</p>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-5 py-2.5 bg-amber-900 hover:bg-amber-800 text-white rounded-lg text-sm font-serif font-semibold cursor-pointer disabled:bg-neutral-300 transition-colors shadow-sm"
+                className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink px-6 text-[15px] font-semibold text-bg transition-[transform,opacity] hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:h-11 sm:w-auto"
               >
-                {submitting ? 'Saving changes...' : 'Save Settings'}
+                {submitting && <LoaderIcon className="h-4 w-4 animate-spin" />}
+                {submitting ? 'Saving changes...' : 'Save changes'}
               </button>
             </div>
           </form>
-        </div>
+        </section>
       </div>
     </div>
   );

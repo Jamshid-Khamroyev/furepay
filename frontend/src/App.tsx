@@ -1,21 +1,31 @@
-import React, { useEffect, ReactNode, useState } from 'react';
+import React, { useEffect, ReactNode, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './store/useStore';
-import Navbar from './components/Navbar';
-import SigninPage from './pages/SigninPage';
-import SignupPage from './pages/SignupPage';
-import BlogsPage from './pages/BlogsPage';
-import BlogDetailPage from './pages/BlogDetailPage';
-import BlogEditorPage from './pages/BlogEditorPage';
+import Navbar, { BottomNav } from './components/Navbar';
 import NotesPage from './pages/NotesPage';
-import ProfilePage from './pages/ProfilePage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AdminBlogsPage from './pages/admin/AdminBlogsPage';
-import AdminNotesPage from './pages/admin/AdminNotesPage';
+import BlogsPage from './pages/BlogsPage';
 import { api } from './api';
 import { LoaderIcon } from 'lucide-react';
-import UserDetailPage from './pages/userDetailPage';
 import { socket } from './config/socket';
+
+// Split rarely-first pages (and the heavy TipTap editor) into their own chunks for faster first load on phones
+const SigninPage = lazy(() => import('./pages/SigninPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage'));
+const BlogEditorPage = lazy(() => import('./pages/BlogEditorPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const UserDetailPage = lazy(() => import('./pages/userDetailPage'));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminBlogsPage = lazy(() => import('./pages/admin/AdminBlogsPage'));
+const AdminNotesPage = lazy(() => import('./pages/admin/AdminNotesPage'));
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[50dvh] items-center justify-center">
+      <LoaderIcon className="h-5 w-5 animate-spin text-accent" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user } = useStore();
@@ -85,13 +95,14 @@ export default function App() {
   return (
     <BrowserRouter>
     {loading ? (
-      <div className='h-screen w-screen flex items-center justify-center'>
-        <LoaderIcon className='h-4 w-4 animate-spin' />
+      <div className='h-dvh w-screen flex items-center justify-center bg-bg'>
+        <LoaderIcon className='h-5 w-5 animate-spin text-accent' />
       </div>
     ) : (
-      <div className="min-h-screen flex flex-col bg-[#fdfcf7]">
+      <div className="min-h-dvh flex flex-col bg-bg text-ink">
         <Navbar />
-        <main className="flex-grow pb-16 sm:pb-8">
+        <main className={`flex-grow ${user ? 'pb-[var(--nav-h)]' : ''}`}>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Auth routes */}
             <Route 
@@ -140,7 +151,9 @@ export default function App() {
               } 
             />
           </Routes>
+          </Suspense>
         </main>
+        <BottomNav />
       </div>
     )}
     </BrowserRouter>

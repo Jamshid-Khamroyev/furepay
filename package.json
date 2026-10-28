@@ -1,0 +1,12 @@
+{
+  "name": "furepay",
+  "private": true,
+  "description": "Root scripts for single-service hosts (e.g. Render): build the React client into backend/public and serve it from Express.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm ci --include=dev --prefix frontend && npm run build --prefix frontend && npm ci --include=dev --prefix backend && node scripts/copy-client.mjs",
+    "start": "cd backend && npx tsx server.ts"
+  }
+}

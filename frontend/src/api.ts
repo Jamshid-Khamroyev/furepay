@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Get base URL from env if provided, otherwise default to relative path
-const API_BASE = (import.meta as any).env.VITE_API_URL || 'https://furepay.onrender.com';
+// Get base URL from env if provided; otherwise use the origin the app is served from
+// (Express serves the built client, so API and client share one origin in production)
+const API_BASE = (import.meta as any).env.VITE_API_URL || window.location.origin;
 
 export const api = axios.create({
   baseURL: API_BASE,
